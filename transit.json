@@ -1,0 +1,258 @@
+{
+  "items": [
+    {
+      "summary": {
+        "no": "1",
+        "start": {
+          "type": "point",
+          "coord": {
+            "lat": 35.66526,
+            "lon": 139.760052
+          },
+          "name": "新橋",
+          "node_id": "00004212",
+          "node_types": [
+            "station"
+          ]
+        },
+        "goal": {
+          "type": "point",
+          "coord": {
+            "lat": 35.654186,
+            "lon": 139.761878
+          },
+          "name": "竹芝",
+          "node_id": "00005975",
+          "node_types": [
+            "station"
+          ]
+        },
+        "move": {
+          "transit_count": 0,
+          "fare": {
+            "unit_0": 190.0,
+            "unit_48": 189.0,
+            "unit_128_train": 5600.0,
+            "unit_130_train": 15960.0,
+            "unit_133_train": 30240.0
+          },
+          "type": "move",
+          "from_time": "2020-08-19T10:02:00+09:00",
+          "to_time": "2020-08-19T10:06:00+09:00",
+          "time": 4,
+          "distance": 1600,
+          "move_type": [
+            "local_train"
+          ]
+        }
+      },
+      "sections": [
+        {
+          "type": "point",
+          "coord": {
+            "lat": 35.66526,
+            "lon": 139.760052
+          },
+          "name": "新橋",
+          "node_id": "00004212",
+          "node_types": [
+            "station"
+          ],
+          "numbering": {
+            "departure": [
+              {
+                "symbol": "U",
+                "number": "01"
+              }
+            ]
+          }
+        },
+        {
+          "type": "move",
+          "transport": {
+            "fare": {
+              "unit_0": 190.0,
+              "unit_48": 189.0,
+              "unit_128": 5600.0,
+              "unit_130": 15960.0,
+              "unit_133": 30240.0,
+              "unit_136": 3360.0,
+              "unit_138": 9580.0,
+              "unit_141": 18150.0
+            },
+            "color": "#27404E",
+            "name": "ゆりかもめ",
+            "fare_season": "normal",
+            "company": {
+              "id": "00000011",
+              "name": "ゆりかもめ"
+            },
+            "links": [
+              {
+                "id": "00000239",
+                "name": "ゆりかもめ",
+                "direction": "down",
+                "destination": {
+                  "id": "00008223",
+                  "name": "豊洲"
+                },
+                "from": {
+                  "id": "00004212",
+                  "name": "新橋"
+                },
+                "to": {
+                  "id": "00005975",
+                  "name": "竹芝"
+                },
+                "is_timetable": "false"
+              }
+            ],
+            "id": "00000558",
+            "type": "普通",
+            "fare_break": {
+              "unit_0": true,
+              "unit_48": true,
+              "unit_128": true,
+              "unit_130": true,
+              "unit_133": true,
+              "unit_136": true,
+              "unit_138": true,
+              "unit_141": true
+            },
+            "fare_detail": [
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "0",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 190.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "48",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 189.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "128",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 5600.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "130",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 15960.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "133",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 30240.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "136",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 3360.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "138",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 9580.0
+              },
+              {
+                "start": {
+                  "name": "新橋",
+                  "node_id": "00004212"
+                },
+                "id": "141",
+                "goal": {
+                  "name": "竹芝",
+                  "node_id": "00005975"
+                },
+                "fare": 18150.0
+              }
+            ]
+          },
+          "move": "local_train",
+          "from_time": "2020-08-19T10:02:00+09:00",
+          "to_time": "2020-08-19T10:06:00+09:00",
+          "time": 4,
+          "distance": 1600,
+          "line_name": "ゆりかもめ"
+        },
+        {
+          "type": "point",
+          "coord": {
+            "lat": 35.654186,
+            "lon": 139.761878
+          },
+          "name": "竹芝",
+          "node_id": "00005975",
+          "node_types": [
+            "station"
+          ],
+          "numbering": {
+            "arrival": [
+              {
+                "symbol": "U",
+                "number": "03"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "unit": {
+    "datum": "wgs84",
+    "coord_unit": "degree",
+    "distance": "metre",
+    "time": "minute",
+    "currency": "JPY"
+  }
+}
