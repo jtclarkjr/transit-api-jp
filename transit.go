@@ -4,10 +4,67 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
+	"time"
+	"unicode"
+
+	"github.com/gojp/kana"
+	"github.com/ikawaha/kagome/tokenizer"
 )
+
+func kanjiToHiraganaTransit(text string) (string, error) {
+	t := tokenizer.New()
+	tokens := t.Analyze(text, tokenizer.Normal)
+	var hiraganaText string
+	for _, token := range tokens {
+		if token.Class == tokenizer.DUMMY {
+			continue
+		}
+		if len(token.Features()) > 7 && token.Features()[7] != "*" {
+			hiraganaText += token.Features()[7]
+		} else {
+			hiraganaText += token.Surface
+		}
+	}
+	return hiraganaText, nil
+}
+
+func translateTextToRomajiTransit(text string) (string, error) {
+	romajiText := kana.KanaToRomaji(text)
+	return romajiText, nil
+}
+
+func capitalizeFirstLetterTransit(text string) string {
+	// Split by parentheses
+	parts := strings.Split(text, "(")
+	for i, part := range parts {
+		part = strings.TrimSpace(part)
+		if len(part) == 0 {
+			continue
+		}
+		runes := []rune(part)
+		runes[0] = unicode.ToUpper(runes[0])
+		parts[i] = string(runes)
+	}
+	return strings.Join(parts, "(")
+}
+
+func applyRomajiRulesTransit(text string) string {
+	replacements := map[string]string{
+		"ou": "o",
+		"uu": "u",
+	}
+
+	for old, new := range replacements {
+		text = strings.ReplaceAll(text, old, new)
+	}
+
+	return text
+}
 
 func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -15,9 +72,7 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")
 
-	url := fmt.Sprintf("https://%s/transport_node?word=%s&limit=1", host,
-		station,
-	)
+	url := fmt.Sprintf("https://%s/transport_node?word=%s&limit=1", host, station)
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -28,21 +83,21 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	request.Header.Add("X-RapidAPI-Key", key)
 	request.Header.Add("X-RapidAPI-Host", host)
 
-	response, error := http.DefaultClient.Do(request)
-	if error != nil {
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
 		channel <- ""
 		return
 	}
 	defer response.Body.Close()
 
-	body, error := io.ReadAll(response.Body)
-	if error != nil {
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
 		channel <- ""
 		return
 	}
 
 	var data map[string]interface{}
-	if error := json.Unmarshal(body, &data); error != nil {
+	if err := json.Unmarshal(body, &data); err != nil {
 		channel <- ""
 		return
 	}
@@ -66,8 +121,93 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	}
 
 	channel <- nodeId
+}
 
-	fmt.Println(channel)
+func translateValueWorker(input <-chan map[string]interface{}, output chan<- error, keysToTranslate []string) {
+	for data := range input {
+		for _, key := range keysToTranslate {
+			keys := strings.Split(key, ".")
+			if err := translateValueTransit(data, keys); err != nil {
+				output <- err
+				return
+			}
+		}
+		output <- nil
+	}
+}
+
+func translateJSONValuesTransit(data map[string]interface{}, keysToTranslate []string, numWorkers int) error {
+	input := make(chan map[string]interface{}, numWorkers)
+	output := make(chan error, numWorkers)
+
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			translateValueWorker(input, output, keysToTranslate)
+		}()
+	}
+
+	input <- data
+	close(input)
+
+	wg.Wait()
+	close(output)
+
+	for err := range output {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func translateValueTransit(data map[string]interface{}, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	key := keys[0]
+	value, found := data[key]
+
+	if !found {
+		return nil
+	}
+
+	if len(keys) == 1 {
+		// We're at the final key in the path
+		if strValue, ok := value.(string); ok {
+			hiraganaValue, err := kanjiToHiraganaTransit(strValue)
+			if err != nil {
+				return err
+			}
+			romajiValue, err := translateTextToRomajiTransit(hiraganaValue)
+			if err != nil {
+				return err
+			}
+			romajiValue = capitalizeFirstLetterTransit(romajiValue)
+			romajiValue = applyRomajiRulesTransit(romajiValue)
+			data[key] = romajiValue
+		}
+	} else {
+		// We're not at the final key, so we need to traverse further
+		switch v := value.(type) {
+		case map[string]interface{}:
+			return translateValueTransit(v, keys[1:])
+		case []interface{}:
+			for _, item := range v {
+				if itemMap, ok := item.(map[string]interface{}); ok {
+					if err := translateValueTransit(itemMap, keys[1:]); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func transit() http.HandlerFunc {
@@ -75,9 +215,12 @@ func transit() http.HandlerFunc {
 	host := os.Getenv("RAPIDAPI_TRANSIT_HOST")
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+
 		startStation := r.URL.Query().Get("start")
 		endStation := r.URL.Query().Get("goal")
-		startTime := r.URL.Query().Get("start_time")
+		startTimeStr := r.URL.Query().Get("start_time")
+		lang := r.URL.Query().Get("lang")
 
 		var wg sync.WaitGroup
 		startChan := make(chan string, 1)
@@ -103,11 +246,11 @@ func transit() http.HandlerFunc {
 			host,
 			startNode,
 			endNode,
-			startTime,
+			startTimeStr,
 		)
 
-		request, error := http.NewRequest("GET", url, nil)
-		if error != nil {
+		request, err := http.NewRequest("GET", url, nil)
+		if err != nil {
 			http.Error(w, "Failed to create request", http.StatusInternalServerError)
 			return
 		}
@@ -115,20 +258,59 @@ func transit() http.HandlerFunc {
 		request.Header.Add("X-RapidAPI-Key", key)
 		request.Header.Add("X-RapidAPI-Host", host)
 
-		response, error := http.DefaultClient.Do(request)
-		if error != nil {
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
 			http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
 			return
 		}
 		defer response.Body.Close()
 
-		body, error := io.ReadAll(response.Body)
-		if error != nil {
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
 			http.Error(w, "Failed to read response", http.StatusInternalServerError)
 			return
 		}
 
+		var responseData map[string]interface{}
+		if err := json.Unmarshal(body, &responseData); err != nil {
+			http.Error(w, "Failed to parse JSON response", http.StatusInternalServerError)
+			return
+		}
+
+		// Translate values to romaji if lang=en
+		if lang == "en" {
+			keysToTranslate := []string{
+				"items.sections.coord.name",
+				"items.sections.transport.company.name",
+				"items.sections.transport.fare_detail.goal.name",
+				"items.sections.transport.fare_detail.start.name",
+				"items.sections.transport.links.destination.name",
+				"items.sections.transport.links.from.name",
+				"items.sections.transport.links.to.name",
+				"items.sections.transport.name",
+				"items.sections.line_name",
+				"items.sections.name",
+				"items.summary.goal.name",
+				"items.summary.start.name",
+			}
+
+			if err := translateJSONValuesTransit(responseData, keysToTranslate, 10); err != nil {
+				log.Printf("Error translating values: %v", err)
+				http.Error(w, "Failed to translate values", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		translatedBody, err := json.Marshal(responseData)
+		if err != nil {
+			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(body)
+		w.Write(translatedBody)
+
+		elapsedTime := time.Since(startTime)
+		log.Printf("Request processed in %s", elapsedTime)
 	}
 }
