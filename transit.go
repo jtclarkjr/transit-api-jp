@@ -10,61 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
-
-	"github.com/gojp/kana"
-	"github.com/ikawaha/kagome/tokenizer"
 )
-
-func kanjiToHiraganaTransit(text string) (string, error) {
-	t := tokenizer.New()
-	tokens := t.Analyze(text, tokenizer.Normal)
-	var hiraganaText string
-	for _, token := range tokens {
-		if token.Class == tokenizer.DUMMY {
-			continue
-		}
-		if len(token.Features()) > 7 && token.Features()[7] != "*" {
-			hiraganaText += token.Features()[7]
-		} else {
-			hiraganaText += token.Surface
-		}
-	}
-	return hiraganaText, nil
-}
-
-func translateTextToRomajiTransit(text string) (string, error) {
-	romajiText := kana.KanaToRomaji(text)
-	return romajiText, nil
-}
-
-func capitalizeFirstLetterTransit(text string) string {
-	// Split by parentheses
-	parts := strings.Split(text, "(")
-	for i, part := range parts {
-		part = strings.TrimSpace(part)
-		if len(part) == 0 {
-			continue
-		}
-		runes := []rune(part)
-		runes[0] = unicode.ToUpper(runes[0])
-		parts[i] = string(runes)
-	}
-	return strings.Join(parts, "(")
-}
-
-func applyRomajiRulesTransit(text string) string {
-	replacements := map[string]string{
-		"ou": "o",
-		"uu": "u",
-	}
-
-	for old, new := range replacements {
-		text = strings.ReplaceAll(text, old, new)
-	}
-
-	return text
-}
 
 func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -179,16 +125,12 @@ func translateValueTransit(data map[string]interface{}, keys []string) error {
 	if len(keys) == 1 {
 		// We're at the final key in the path
 		if strValue, ok := value.(string); ok {
-			hiraganaValue, err := kanjiToHiraganaTransit(strValue)
+			romajiValue, err := kanjiToRomaji(strValue)
 			if err != nil {
 				return err
 			}
-			romajiValue, err := translateTextToRomajiTransit(hiraganaValue)
-			if err != nil {
-				return err
-			}
-			romajiValue = capitalizeFirstLetterTransit(romajiValue)
-			romajiValue = applyRomajiRulesTransit(romajiValue)
+			romajiValue = capitalizeFirstLetter(romajiValue)
+			romajiValue = applyRomajiRules(romajiValue)
 			data[key] = romajiValue
 		}
 	} else {

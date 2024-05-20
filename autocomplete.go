@@ -7,11 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
-	"unicode"
-
-	"github.com/gojp/kana"
-	"github.com/ikawaha/kagome/tokenizer"
 )
 
 type Coord struct {
@@ -48,56 +43,6 @@ type AutocompleteResponse struct {
 
 type FilteredAutocompleteResponse struct {
 	Items []FilteredStation `json:"items"`
-}
-
-func kanjiToHiraganaAutocomplete(text string) (string, error) {
-	t := tokenizer.New()
-	tokens := t.Analyze(text, tokenizer.Normal)
-	var hiraganaText string
-	for _, token := range tokens {
-		if token.Class == tokenizer.DUMMY {
-			continue
-		}
-		if len(token.Features()) > 7 && token.Features()[7] != "*" {
-			hiraganaText += token.Features()[7]
-		} else {
-			hiraganaText += token.Surface
-		}
-	}
-	return hiraganaText, nil
-}
-
-func translateTextToRomajiAutocomplete(text string) (string, error) {
-	romajiText := kana.KanaToRomaji(text)
-	return romajiText, nil
-}
-
-func capitalizeFirstLetter(text string) string {
-	// Split by parentheses
-	parts := strings.Split(text, "(")
-	for i, part := range parts {
-		part = strings.TrimSpace(part)
-		if len(part) == 0 {
-			continue
-		}
-		runes := []rune(part)
-		runes[0] = unicode.ToUpper(runes[0])
-		parts[i] = string(runes)
-	}
-	return strings.Join(parts, "(")
-}
-
-func applyRomajiRules(text string) string {
-	replacements := map[string]string{
-		"ou": "o",
-		"uu": "u",
-	}
-
-	for old, new := range replacements {
-		text = strings.ReplaceAll(text, old, new)
-	}
-
-	return text
 }
 
 func autocomplete(w http.ResponseWriter, r *http.Request) {
@@ -157,14 +102,14 @@ func autocomplete(w http.ResponseWriter, r *http.Request) {
 	// Translate the name from Japanese to Romaji if lang=en
 	if lang == "en" {
 		for i, item := range filteredItems {
-			hiraganaName, err := kanjiToHiraganaAutocomplete(item.Name)
+			hiraganaName, err := kanjiToRomaji(item.Name)
 			if err != nil {
 				log.Printf("Error converting Kanji to Hiragana: %v", err)
 				http.Error(w, fmt.Sprintf("Failed to convert Kanji to Hiragana: %v", err), http.StatusInternalServerError)
 				return
 			}
 
-			romajiName, err := translateTextToRomajiAutocomplete(hiraganaName)
+			romajiName, err := kanjiToRomaji(hiraganaName)
 			if err != nil {
 				log.Printf("Error converting Kana to Romaji: %v", err)
 				http.Error(w, fmt.Sprintf("Failed to convert Kana to Romaji: %v", err), http.StatusInternalServerError)
