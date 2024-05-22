@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"transit-api/utils"
 )
 
 type Coord struct {
@@ -102,22 +104,22 @@ func autocomplete(w http.ResponseWriter, r *http.Request) {
 	// Translate the name from Japanese to Romaji if lang=en
 	if lang == "en" {
 		for i, item := range filteredItems {
-			hiraganaName, err := kanjiToRomaji(item.Name)
+			hiraganaName, err := utils.KanjiToRomaji(item.Name)
 			if err != nil {
 				log.Printf("Error converting Kanji to Hiragana: %v", err)
 				http.Error(w, fmt.Sprintf("Failed to convert Kanji to Hiragana: %v", err), http.StatusInternalServerError)
 				return
 			}
 
-			romajiName, err := kanjiToRomaji(hiraganaName)
+			romajiName, err := utils.KanjiToRomaji(hiraganaName)
 			if err != nil {
 				log.Printf("Error converting Kana to Romaji: %v", err)
 				http.Error(w, fmt.Sprintf("Failed to convert Kana to Romaji: %v", err), http.StatusInternalServerError)
 				return
 			}
 
-			romajiName = capitalizeFirstLetter(romajiName)
-			romajiName = applyRomajiRules(romajiName)
+			romajiName = utils.CapitalizeFirstLetter(romajiName)
+			romajiName = utils.ApplyRomajiRules(romajiName)
 
 			// Print the original and converted names
 			fmt.Printf("Original name: %s, Hiragana name: %s, Romaji name: %s\n", item.Name, hiraganaName, romajiName)

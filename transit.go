@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"transit-api/utils"
 )
 
 func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
@@ -125,12 +127,12 @@ func translateValueTransit(data map[string]interface{}, keys []string) error {
 	if len(keys) == 1 {
 		// We're at the final key in the path
 		if strValue, ok := value.(string); ok {
-			romajiValue, err := kanjiToRomaji(strValue)
+			romajiValue, err := utils.KanjiToRomaji(strValue)
 			if err != nil {
 				return err
 			}
-			romajiValue = capitalizeFirstLetter(romajiValue)
-			romajiValue = applyRomajiRules(romajiValue)
+			romajiValue = utils.CapitalizeFirstLetter(romajiValue)
+			romajiValue = utils.ApplyRomajiRules(romajiValue)
 			data[key] = romajiValue
 		}
 	} else {
