@@ -2,6 +2,7 @@ package utils
 
 import (
 	"strings"
+	"sync"
 	"unicode"
 
 	kanjikana "github.com/jtclarkjr/kanjikana"
@@ -41,4 +42,87 @@ func KanjiToRomaji(text string) (string, error) {
 		return "", err
 	}
 	return romaji, nil
+}
+
+func TranslateValueWorker(input <-chan map[string]interface{}, output chan<- error, keysToTranslate []string) {
+	for data := range input {
+		for _, key := range keysToTranslate {
+			keys := strings.Split(key, ".")
+			if err := TranslateValueTransit(data, keys); err != nil {
+				output <- err
+				return
+			}
+		}
+		output <- nil
+	}
+}
+
+func TranslateJSONValuesTransit(data map[string]interface{}, keysToTranslate []string, numWorkers int) error {
+	input := make(chan map[string]interface{}, numWorkers)
+	output := make(chan error, numWorkers)
+
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			TranslateValueWorker(input, output, keysToTranslate)
+		}()
+	}
+
+	input <- data
+	close(input)
+
+	wg.Wait()
+	close(output)
+
+	for err := range output {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func TranslateValueTransit(data map[string]interface{}, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	key := keys[0]
+	value, found := data[key]
+
+	if !found {
+		return nil
+	}
+
+	if len(keys) == 1 {
+		// We're at the final key in the path
+		if strValue, ok := value.(string); ok {
+			romajiValue, err := KanjiToRomaji(strValue)
+			if err != nil {
+				return err
+			}
+			romajiValue = CapitalizeFirstLetter(romajiValue)
+			romajiValue = ApplyRomajiRules(romajiValue)
+			data[key] = romajiValue
+		}
+	} else {
+		// We're not at the final key, so we need to traverse further
+		switch v := value.(type) {
+		case map[string]interface{}:
+			return TranslateValueTransit(v, keys[1:])
+		case []interface{}:
+			for _, item := range v {
+				if itemMap, ok := item.(map[string]interface{}); ok {
+					if err := TranslateValueTransit(itemMap, keys[1:]); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

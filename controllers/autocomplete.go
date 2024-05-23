@@ -1,4 +1,4 @@
-package main
+package controllers
 
 import (
 	"encoding/json"
@@ -47,7 +47,7 @@ type FilteredAutocompleteResponse struct {
 	Items []FilteredStation `json:"items"`
 }
 
-func autocomplete(w http.ResponseWriter, r *http.Request) {
+func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")
 	lang := r.URL.Query().Get("lang")
@@ -82,7 +82,7 @@ func autocomplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Print the response from RapidAPI
-	fmt.Println("Response from RapidAPI:", string(body))
+	// fmt.Println("Response from RapidAPI:", string(body))
 
 	// Unmarshal the body into the structured response
 	var response AutocompleteResponse
@@ -122,7 +122,7 @@ func autocomplete(w http.ResponseWriter, r *http.Request) {
 			romajiName = utils.ApplyRomajiRules(romajiName)
 
 			// Print the original and converted names
-			fmt.Printf("Original name: %s, Hiragana name: %s, Romaji name: %s\n", item.Name, hiraganaName, romajiName)
+			// fmt.Printf("Original name: %s, Hiragana name: %s, Romaji name: %s\n", item.Name, hiraganaName, romajiName)
 			filteredItems[i].Name = romajiName
 		}
 	}

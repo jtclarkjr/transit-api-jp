@@ -1,4 +1,4 @@
-package main
+package controllers
 
 import (
 	"encoding/json"
@@ -7,13 +7,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
-	"time"
 
 	"transit-api/utils"
 )
 
+// Used to GET nodeIds for transit request
 func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -71,95 +70,12 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	channel <- nodeId
 }
 
-func translateValueWorker(input <-chan map[string]interface{}, output chan<- error, keysToTranslate []string) {
-	for data := range input {
-		for _, key := range keysToTranslate {
-			keys := strings.Split(key, ".")
-			if err := translateValueTransit(data, keys); err != nil {
-				output <- err
-				return
-			}
-		}
-		output <- nil
-	}
-}
-
-func translateJSONValuesTransit(data map[string]interface{}, keysToTranslate []string, numWorkers int) error {
-	input := make(chan map[string]interface{}, numWorkers)
-	output := make(chan error, numWorkers)
-
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			translateValueWorker(input, output, keysToTranslate)
-		}()
-	}
-
-	input <- data
-	close(input)
-
-	wg.Wait()
-	close(output)
-
-	for err := range output {
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func translateValueTransit(data map[string]interface{}, keys []string) error {
-	if len(keys) == 0 {
-		return nil
-	}
-
-	key := keys[0]
-	value, found := data[key]
-
-	if !found {
-		return nil
-	}
-
-	if len(keys) == 1 {
-		// We're at the final key in the path
-		if strValue, ok := value.(string); ok {
-			romajiValue, err := utils.KanjiToRomaji(strValue)
-			if err != nil {
-				return err
-			}
-			romajiValue = utils.CapitalizeFirstLetter(romajiValue)
-			romajiValue = utils.ApplyRomajiRules(romajiValue)
-			data[key] = romajiValue
-		}
-	} else {
-		// We're not at the final key, so we need to traverse further
-		switch v := value.(type) {
-		case map[string]interface{}:
-			return translateValueTransit(v, keys[1:])
-		case []interface{}:
-			for _, item := range v {
-				if itemMap, ok := item.(map[string]interface{}); ok {
-					if err := translateValueTransit(itemMap, keys[1:]); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func transit() http.HandlerFunc {
+func Transit() http.HandlerFunc {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSIT_HOST")
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
+		// startTime := time.Now()
 
 		startStation := r.URL.Query().Get("start")
 		endStation := r.URL.Query().Get("goal")
@@ -238,7 +154,7 @@ func transit() http.HandlerFunc {
 				"items.summary.start.name",
 			}
 
-			if err := translateJSONValuesTransit(responseData, keysToTranslate, 10); err != nil {
+			if err := utils.TranslateJSONValuesTransit(responseData, keysToTranslate, 10); err != nil {
 				log.Printf("Error translating values: %v", err)
 				http.Error(w, "Failed to translate values", http.StatusInternalServerError)
 				return
@@ -254,7 +170,7 @@ func transit() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(translatedBody)
 
-		elapsedTime := time.Since(startTime)
-		log.Printf("Request processed in %s", elapsedTime)
+		// elapsedTime := time.Since(startTime)
+		// log.Printf("Request processed in %s", elapsedTime)
 	}
 }
