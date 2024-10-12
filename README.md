@@ -26,7 +26,7 @@ Returns a list of objects for stations based on input using `word` param
 
 ### JA
 
-`/autocomplete?work=station_name`
+`/autocomplete?word=station_name`
 
 ### EN
 
