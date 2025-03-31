@@ -6,14 +6,13 @@ import (
 
 	controllers "transit-api/controllers"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/joho/godotenv"
+	"github.com/jtclarkjr/router-go"
+	"github.com/jtclarkjr/router-go/middleware"
 )
 
 func main() {
-	loadEnv()
-	router := chi.NewRouter()
+	// loadEnv()
+	router := router.NewRouter()
 
 	router.Use(middleware.Logger)
 	router.Get("/transit", controllers.Transit())
@@ -23,9 +22,10 @@ func main() {
 	http.ListenAndServe(":3000", router)
 }
 
-func loadEnv() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Printf("Could not load: %v", err)
-	}
-}
+// loadEnv loads environment variables from a .env file for local development.
+// func loadEnv() {
+// 	err := godotenv.Load(".env")
+// 	if err != nil {
+// 		fmt.Printf("Could not load: %v", err)
+// 	}
+// }
