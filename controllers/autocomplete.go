@@ -97,8 +97,11 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 		if len(item.Types) > 0 {
 			item.Type = item.Types[0]
 		}
-		filteredItem := FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
-		filteredItems = append(filteredItems, filteredItem)
+		// Only include items where type is "station"
+		if item.Type == "station" {
+			filteredItem := FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
+			filteredItems = append(filteredItems, filteredItem)
+		}
 	}
 
 	// Translate the name from Japanese to Romaji if lang=en
