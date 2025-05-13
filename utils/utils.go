@@ -23,19 +23,6 @@ func CapitalizeFirstLetter(text string) string {
 	return strings.Join(parts, "(")
 }
 
-func ApplyRomajiRules(text string) string {
-	replacements := map[string]string{
-		"ou": "o",
-		"uu": "u",
-	}
-
-	for old, new := range replacements {
-		text = strings.ReplaceAll(text, old, new)
-	}
-
-	return text
-}
-
 func KanjiToRomaji(text string) (string, error) {
 	romaji, err := kanjikana.ConvertKanjiToRomaji(text)
 	if err != nil {
@@ -105,7 +92,6 @@ func TranslateValueTransit(data map[string]interface{}, keys []string) error {
 				return err
 			}
 			romajiValue = CapitalizeFirstLetter(romajiValue)
-			romajiValue = ApplyRomajiRules(romajiValue)
 			data[key] = romajiValue
 		}
 	} else {

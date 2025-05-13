@@ -122,7 +122,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 			}
 
 			romajiName = utils.CapitalizeFirstLetter(romajiName)
-			romajiName = utils.ApplyRomajiRules(romajiName)
+			// romajiName = utils.ApplyRomajiRules(romajiName)
 
 			// Print the original and converted names
 			// fmt.Printf("Original name: %s, Hiragana name: %s, Romaji name: %s\n", item.Name, hiraganaName, romajiName)

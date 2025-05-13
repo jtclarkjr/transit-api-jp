@@ -20,7 +20,7 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")
 
 	url := fmt.Sprintf("https://%s/transport_node?word=%s&limit=1", host, station)
-	log.Printf("Fetching node for station: %s, URL: %s", station, url)
+	// log.Printf("Fetching node for station: %s, URL: %s", station, url)
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -47,7 +47,7 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 		return
 	}
 
-	log.Printf("Response body for station %s: %s", station, string(body))
+	// log.Printf("Response body for station %s: %s", station, string(body))
 
 	var data map[string]interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
@@ -77,7 +77,7 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 		return
 	}
 
-	log.Printf("Found node ID for station %s: %s", station, nodeId)
+	// log.Printf("Found node ID for station %s: %s", station, nodeId)
 	channel <- nodeId
 }
 
