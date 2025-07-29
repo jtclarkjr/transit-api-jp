@@ -31,7 +31,7 @@ func KanjiToRomaji(text string) (string, error) {
 	return romaji, nil
 }
 
-func TranslateValueWorker(input <-chan map[string]interface{}, output chan<- error, keysToTranslate []string) {
+func TranslateValueWorker(input <-chan map[string]any, output chan<- error, keysToTranslate []string) {
 	for data := range input {
 		for _, key := range keysToTranslate {
 			keys := strings.Split(key, ".")
@@ -44,8 +44,8 @@ func TranslateValueWorker(input <-chan map[string]interface{}, output chan<- err
 	}
 }
 
-func TranslateJSONValuesTransit(data map[string]interface{}, keysToTranslate []string, numWorkers int) error {
-	input := make(chan map[string]interface{}, numWorkers)
+func TranslateJSONValuesTransit(data map[string]any, keysToTranslate []string, numWorkers int) error {
+	input := make(chan map[string]any, numWorkers)
 	output := make(chan error, numWorkers)
 
 	var wg sync.WaitGroup
@@ -72,7 +72,7 @@ func TranslateJSONValuesTransit(data map[string]interface{}, keysToTranslate []s
 	return nil
 }
 
-func TranslateValueTransit(data map[string]interface{}, keys []string) error {
+func TranslateValueTransit(data map[string]any, keys []string) error {
 	if len(keys) == 0 {
 		return nil
 	}
@@ -97,11 +97,11 @@ func TranslateValueTransit(data map[string]interface{}, keys []string) error {
 	} else {
 		// We're not at the final key, so we need to traverse further
 		switch v := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			return TranslateValueTransit(v, keys[1:])
-		case []interface{}:
+		case []any:
 			for _, item := range v {
-				if itemMap, ok := item.(map[string]interface{}); ok {
+				if itemMap, ok := item.(map[string]any); ok {
 					if err := TranslateValueTransit(itemMap, keys[1:]); err != nil {
 						return err
 					}

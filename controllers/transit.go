@@ -49,21 +49,21 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 
 	// log.Printf("Response body for station %s: %s", station, string(body))
 
-	var data map[string]interface{}
+	var data map[string]any
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Printf("Error unmarshaling response for station %s: %v", station, err)
 		channel <- ""
 		return
 	}
 
-	items, found := data["items"].([]interface{})
+	items, found := data["items"].([]any)
 	if !found || len(items) == 0 {
 		log.Printf("No items found in response for station %s. Full response: %s", station, string(body))
 		channel <- ""
 		return
 	}
 
-	itemMap, ok := items[0].(map[string]interface{})
+	itemMap, ok := items[0].(map[string]any)
 	if !ok {
 		log.Printf("Error processing item map for station %s", station)
 		channel <- ""
@@ -142,7 +142,7 @@ func Transit() http.HandlerFunc {
 			return
 		}
 
-		var responseData map[string]interface{}
+		var responseData map[string]any
 		if err := json.Unmarshal(body, &responseData); err != nil {
 			http.Error(w, "Failed to parse JSON response", http.StatusInternalServerError)
 			return
