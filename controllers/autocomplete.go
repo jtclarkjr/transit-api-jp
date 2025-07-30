@@ -73,7 +73,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Failed to translate station names", http.StatusInternalServerError)
 					return
 				}
-				filteredItemsEn = append(filteredItemsEn, map[string]string{"name": utils.CapitalizeFirstLetter(romajiValue)})
+				filteredItemsEn = append(filteredItemsEn, map[string]string{"name": romajiValue, "id": item.ID, "type": item.Type})
 			}
 		}
 		filteredResponse := map[string]interface{}{"items": filteredItemsEn}
