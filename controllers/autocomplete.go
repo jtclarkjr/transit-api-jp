@@ -56,33 +56,51 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Filter and transform the response
+	// If the language is English, translate station names to Romaji
+	// EN value uses ruby key value instead of name since kanji included city names in parenthesis
+	// EN still returns the name key with ruby value in Romaji though
+	if lang == "en" {
+		var filteredItemsEn []map[string]string
+		for _, item := range response.Items {
+			if len(item.Types) > 0 {
+				item.Type = item.Types[0]
+			}
+			if item.Type == "station" {
+				name := item.Ruby
+				romajiValue, err := utils.KanjiToRomaji(name)
+				if err != nil {
+					log.Printf("Error translating station name: %v", err)
+					http.Error(w, "Failed to translate station names", http.StatusInternalServerError)
+					return
+				}
+				filteredItemsEn = append(filteredItemsEn, map[string]string{"name": utils.CapitalizeFirstLetter(romajiValue)})
+			}
+		}
+		filteredResponse := map[string]interface{}{"items": filteredItemsEn}
+		filteredBody, err := json.Marshal(filteredResponse)
+		if err != nil {
+			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(filteredBody)
+		return
+	}
+
+	// Non-English: keep previous logic
 	var filteredItems []models.FilteredStation
 	for _, item := range response.Items {
 		if len(item.Types) > 0 {
 			item.Type = item.Types[0]
 		}
-		// Only include items where type is "station"
+
+		// Only include items of type "station"
 		if item.Type == "station" {
 			filteredItem := models.FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
-			// Add ruby key for non-en languages
-			if lang != "en" {
-				filteredItem.Ruby = item.Ruby
-			}
 			filteredItems = append(filteredItems, filteredItem)
 		}
 	}
 
-	// Translate the name from Japanese to Romaji if lang=en
-	if lang == "en" {
-		if err := utils.TranslateFilteredStations(filteredItems); err != nil {
-			log.Printf("Error translating station names: %v", err)
-			http.Error(w, "Failed to translate station names", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Marshal the filtered response back to JSON
 	filteredResponse := models.FilteredAutocompleteResponse{Items: filteredItems}
 	filteredBody, err := json.Marshal(filteredResponse)
 	if err != nil {
