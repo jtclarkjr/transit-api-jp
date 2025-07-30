@@ -65,6 +65,10 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 		// Only include items where type is "station"
 		if item.Type == "station" {
 			filteredItem := models.FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
+			// Add ruby key for non-en languages
+			if lang != "en" {
+				filteredItem.Ruby = item.Ruby
+			}
 			filteredItems = append(filteredItems, filteredItem)
 		}
 	}
