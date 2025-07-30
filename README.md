@@ -1,3 +1,9 @@
+# Transit API JP
+
+Go REST API for Transit (trains/buses) in Japan
+
+Uses NAVITIME API via RAPIDAPI
+
 ## Running Locally with Docker Compose
 
 1. **Ensure you have Docker and Docker Compose installed.**
@@ -11,14 +17,6 @@
    ```
 
 4. **Access the API** at [http://localhost:8080](http://localhost:8080)
-
----
-
-# Transit API JP
-
-Go REST API for Transit (trains/buses) in Japan
-
-Uses NAVITIME API via RAPIDAPI
 
 ## Type System
 
