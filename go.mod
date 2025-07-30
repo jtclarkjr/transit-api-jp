@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/jtclarkjr/kanjikana v0.3.0
-	github.com/jtclarkjr/router-go v0.2.0
+	github.com/jtclarkjr/router-go v0.3.1
 )
 
 require (

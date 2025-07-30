@@ -17,6 +17,8 @@ func main() {
 	router.Use(middleware.RateLimiter)
 	router.Use(middleware.Throttle((100)))
 
+	router.Use(middleware.EnvVarChecker("RAPIDAPI_KEY", "RAPIDAPI_TRANSPORT_HOST", "RAPIDAPI_TRANSIT_HOST"))
+
 	router.Get("/transit", controllers.Transit())
 	router.Get("/autocomplete", controllers.Autocomplete)
 

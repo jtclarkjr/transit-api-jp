@@ -8,5 +8,5 @@ github.com/ikawaha/kagome/v2 v2.9.8 h1:38NPtQ7Rqni8uAyvfrkeoRRC2EhxntbRJSWfdG2FE
 github.com/ikawaha/kagome/v2 v2.9.8/go.mod h1:PD8yjbWsyBPcsfEjB75heuB0LOPlmMH4Mb2htdB4UWo=
 github.com/jtclarkjr/kanjikana v0.3.0 h1:UeKKdSUXK98qJ1DxoJnsFhW0rTZOHR9g5z8GuoBb4Oc=
 github.com/jtclarkjr/kanjikana v0.3.0/go.mod h1:XYvvEnazetNp96GMF6WE0/iDHUQZ/1VtM201wvtpwaM=
-github.com/jtclarkjr/router-go v0.2.0 h1:V0YYxp819NDaBubXouMUqvloQokuVaU6NweNWh8NJSQ=
-github.com/jtclarkjr/router-go v0.2.0/go.mod h1:XrZ+o5DzvCxEmPNHYTyZOXTb80E9rGc3X2Srr3UgZRA=
+github.com/jtclarkjr/router-go v0.3.1 h1:4JqRXnw4hSuLtF6BnJUbiCRVussU4WBND9Qy8hZjaiI=
+github.com/jtclarkjr/router-go v0.3.1/go.mod h1:XrZ+o5DzvCxEmPNHYTyZOXTb80E9rGc3X2Srr3UgZRA=
