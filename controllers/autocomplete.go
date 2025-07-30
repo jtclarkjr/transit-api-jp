@@ -8,44 +8,9 @@ import (
 	"net/http"
 	"os"
 
+	"transit-api/models"
 	"transit-api/utils"
 )
-
-type Coord struct {
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
-}
-
-type Numbering struct {
-	Symbol string `json:"symbol"`
-	Number string `json:"number"`
-}
-
-type Station struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Ruby        string      `json:"ruby"`
-	Types       []string    `json:"types"`
-	AddressName string      `json:"address_name"`
-	AddressCode string      `json:"address_code"`
-	Coord       Coord       `json:"coord"`
-	Numbering   []Numbering `json:"numbering"`
-	Type        string      `json:"type"` // This field will store the first type
-}
-
-type FilteredStation struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
-type AutocompleteResponse struct {
-	Items []Station `json:"items"`
-}
-
-type FilteredAutocompleteResponse struct {
-	Items []FilteredStation `json:"items"`
-}
 
 func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	key := os.Getenv("RAPIDAPI_KEY")
@@ -85,52 +50,36 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println("Response from RapidAPI:", string(body))
 
 	// Unmarshal the body into the structured response
-	var response AutocompleteResponse
+	var response models.AutocompleteResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		http.Error(w, "Failed to parse JSON response", http.StatusInternalServerError)
 		return
 	}
 
 	// Filter and transform the response
-	var filteredItems []FilteredStation
+	var filteredItems []models.FilteredStation
 	for _, item := range response.Items {
 		if len(item.Types) > 0 {
 			item.Type = item.Types[0]
 		}
 		// Only include items where type is "station"
 		if item.Type == "station" {
-			filteredItem := FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
+			filteredItem := models.FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
 			filteredItems = append(filteredItems, filteredItem)
 		}
 	}
 
 	// Translate the name from Japanese to Romaji if lang=en
 	if lang == "en" {
-		for i, item := range filteredItems {
-			hiraganaName, err := utils.KanjiToRomaji(item.Name)
-			if err != nil {
-				log.Printf("Error converting Kanji to Hiragana: %v", err)
-				http.Error(w, fmt.Sprintf("Failed to convert Kanji to Hiragana: %v", err), http.StatusInternalServerError)
-				return
-			}
-
-			romajiName, err := utils.KanjiToRomaji(hiraganaName)
-			if err != nil {
-				log.Printf("Error converting Kana to Romaji: %v", err)
-				http.Error(w, fmt.Sprintf("Failed to convert Kana to Romaji: %v", err), http.StatusInternalServerError)
-				return
-			}
-
-			romajiName = utils.CapitalizeFirstLetter(romajiName)
-
-			// Print the original and converted names
-			// fmt.Printf("Original name: %s, Hiragana name: %s, Romaji name: %s\n", item.Name, hiraganaName, romajiName)
-			filteredItems[i].Name = romajiName
+		if err := utils.TranslateFilteredStations(filteredItems); err != nil {
+			log.Printf("Error translating station names: %v", err)
+			http.Error(w, "Failed to translate station names", http.StatusInternalServerError)
+			return
 		}
 	}
 
 	// Marshal the filtered response back to JSON
-	filteredResponse := FilteredAutocompleteResponse{Items: filteredItems}
+	filteredResponse := models.FilteredAutocompleteResponse{Items: filteredItems}
 	filteredBody, err := json.Marshal(filteredResponse)
 	if err != nil {
 		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)

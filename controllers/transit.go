@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
-
+	"transit-api/models"
 	"transit-api/utils"
 )
 
@@ -49,29 +49,21 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 
 	// log.Printf("Response body for station %s: %s", station, string(body))
 
-	var data map[string]any
+	var data models.NodeResponse
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Printf("Error unmarshaling response for station %s: %v", station, err)
 		channel <- ""
 		return
 	}
 
-	items, found := data["items"].([]any)
-	if !found || len(items) == 0 {
+	if len(data.Items) == 0 {
 		log.Printf("No items found in response for station %s. Full response: %s", station, string(body))
 		channel <- ""
 		return
 	}
 
-	itemMap, ok := items[0].(map[string]any)
-	if !ok {
-		log.Printf("Error processing item map for station %s", station)
-		channel <- ""
-		return
-	}
-
-	nodeId, ok := itemMap["id"].(string)
-	if !ok {
+	nodeId := data.Items[0].ID
+	if nodeId == "" {
 		log.Printf("No node ID found for station %s", station)
 		channel <- ""
 		return
@@ -142,7 +134,7 @@ func Transit() http.HandlerFunc {
 			return
 		}
 
-		var responseData map[string]any
+		var responseData models.TransitResponse
 		if err := json.Unmarshal(body, &responseData); err != nil {
 			http.Error(w, "Failed to parse JSON response", http.StatusInternalServerError)
 			return
@@ -150,22 +142,7 @@ func Transit() http.HandlerFunc {
 
 		// Translate values to romaji if lang=en
 		if lang == "en" {
-			keysToTranslate := []string{
-				"items.sections.coord.name",
-				"items.sections.transport.company.name",
-				"items.sections.transport.fare_detail.goal.name",
-				"items.sections.transport.fare_detail.start.name",
-				"items.sections.transport.links.destination.name",
-				"items.sections.transport.links.from.name",
-				"items.sections.transport.links.to.name",
-				"items.sections.transport.name",
-				"items.sections.line_name",
-				"items.sections.name",
-				"items.summary.goal.name",
-				"items.summary.start.name",
-			}
-
-			if err := utils.TranslateJSONValuesTransit(responseData, keysToTranslate, 10); err != nil {
+			if err := utils.TranslateTypedTransitResponse(&responseData); err != nil {
 				log.Printf("Error translating values: %v", err)
 				http.Error(w, "Failed to translate values", http.StatusInternalServerError)
 				return

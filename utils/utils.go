@@ -2,8 +2,9 @@ package utils
 
 import (
 	"strings"
-	"sync"
 	"unicode"
+
+	"transit-api/models"
 
 	kanjikana "github.com/jtclarkjr/kanjikana"
 )
@@ -31,84 +32,98 @@ func KanjiToRomaji(text string) (string, error) {
 	return romaji, nil
 }
 
-func TranslateValueWorker(input <-chan map[string]any, output chan<- error, keysToTranslate []string) {
-	for data := range input {
-		for _, key := range keysToTranslate {
-			keys := strings.Split(key, ".")
-			if err := TranslateValueTransit(data, keys); err != nil {
-				output <- err
-				return
-			}
-		}
-		output <- nil
-	}
-}
+// TranslateTypedTransitResponse translates Japanese text to Romaji in a typed TransitResponse struct
+func TranslateTypedTransitResponse(response *models.TransitResponse) error {
+	for i := range response.Items {
+		item := &response.Items[i]
 
-func TranslateJSONValuesTransit(data map[string]any, keysToTranslate []string, numWorkers int) error {
-	input := make(chan map[string]any, numWorkers)
-	output := make(chan error, numWorkers)
-
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			TranslateValueWorker(input, output, keysToTranslate)
-		}()
-	}
-
-	input <- data
-	close(input)
-
-	wg.Wait()
-	close(output)
-
-	for err := range output {
-		if err != nil {
+		// Translate summary names
+		if err := translateString(&item.Summary.Start.Name); err != nil {
 			return err
 		}
-	}
+		if err := translateString(&item.Summary.Goal.Name); err != nil {
+			return err
+		}
 
-	return nil
-}
+		// Translate sections
+		for j := range item.Sections {
+			section := &item.Sections[j]
 
-func TranslateValueTransit(data map[string]any, keys []string) error {
-	if len(keys) == 0 {
-		return nil
-	}
-
-	key := keys[0]
-	value, found := data[key]
-
-	if !found {
-		return nil
-	}
-
-	if len(keys) == 1 {
-		// We're at the final key in the path
-		if strValue, ok := value.(string); ok {
-			romajiValue, err := KanjiToRomaji(strValue)
-			if err != nil {
+			// Translate section name
+			if err := translateString(&section.Name); err != nil {
 				return err
 			}
-			romajiValue = CapitalizeFirstLetter(romajiValue)
-			data[key] = romajiValue
-		}
-	} else {
-		// We're not at the final key, so we need to traverse further
-		switch v := value.(type) {
-		case map[string]any:
-			return TranslateValueTransit(v, keys[1:])
-		case []any:
-			for _, item := range v {
-				if itemMap, ok := item.(map[string]any); ok {
-					if err := TranslateValueTransit(itemMap, keys[1:]); err != nil {
+
+			// Translate line name
+			if err := translateString(&section.LineName); err != nil {
+				return err
+			}
+
+			// Translate transport details if present
+			if section.Transport != nil {
+				transport := section.Transport
+
+				// Translate transport name
+				if err := translateString(&transport.Name); err != nil {
+					return err
+				}
+
+				// Translate company name
+				if err := translateString(&transport.Company.Name); err != nil {
+					return err
+				}
+
+				// Translate links
+				for k := range transport.Links {
+					link := &transport.Links[k]
+					if err := translateString(&link.Name); err != nil {
+						return err
+					}
+					if err := translateString(&link.Destination.Name); err != nil {
+						return err
+					}
+					if err := translateString(&link.From.Name); err != nil {
+						return err
+					}
+					if err := translateString(&link.To.Name); err != nil {
+						return err
+					}
+				}
+
+				// Translate fare details
+				for k := range transport.FareDetail {
+					fareDetail := &transport.FareDetail[k]
+					if err := translateString(&fareDetail.Start.Name); err != nil {
+						return err
+					}
+					if err := translateString(&fareDetail.Goal.Name); err != nil {
 						return err
 					}
 				}
 			}
 		}
 	}
+	return nil
+}
 
+// translateString is a helper function that translates a single string if it's not empty
+func translateString(str *string) error {
+	if *str != "" {
+		romajiValue, err := KanjiToRomaji(*str)
+		if err != nil {
+			return err
+		}
+		*str = CapitalizeFirstLetter(romajiValue)
+	}
+	return nil
+}
+
+// TranslateFilteredStations translates Japanese text to Romaji in filtered station items
+func TranslateFilteredStations(items []models.FilteredStation) error {
+	for i := range items {
+		if err := translateString(&items[i].Name); err != nil {
+			return err
+		}
+	}
 	return nil
 }
