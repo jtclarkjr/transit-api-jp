@@ -60,7 +60,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	// EN value uses ruby key value instead of name since kanji included city names in parenthesis
 	// EN still returns the name key with ruby value in Romaji though
 	if lang == "en" {
-		var filteredItemsEn []map[string]string
+		var filteredItemsEn []models.FilteredStation
 		for _, item := range response.Items {
 			if len(item.Types) > 0 {
 				item.Type = item.Types[0]
@@ -73,10 +73,14 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Failed to translate station names", http.StatusInternalServerError)
 					return
 				}
-				filteredItemsEn = append(filteredItemsEn, map[string]string{"name": romajiValue, "id": item.ID, "type": item.Type})
+				filteredItemsEn = append(filteredItemsEn, models.FilteredStation{
+					ID:   item.ID,
+					Name: romajiValue,
+					Type: item.Type,
+				})
 			}
 		}
-		filteredResponse := map[string]interface{}{"items": filteredItemsEn}
+		filteredResponse := models.FilteredAutocompleteResponse{Items: filteredItemsEn}
 		filteredBody, err := json.Marshal(filteredResponse)
 		if err != nil {
 			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
