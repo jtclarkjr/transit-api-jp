@@ -1,3 +1,19 @@
+## Running Locally with Docker Compose
+
+1. **Ensure you have Docker and Docker Compose installed.**
+
+2. **Create a `.env` file** in the project root with your required environment variables (e.g., RAPIDAPI_KEY, RAPIDAPI_TRANSPORT_HOST, RAPIDAPI_TRANSIT_HOST).
+
+3. **Build and run the service:**
+
+   ```sh
+   docker compose up --build
+   ```
+
+4. **Access the API** at [http://localhost:8080](http://localhost:8080)
+
+---
+
 # Transit API JP
 
 Go REST API for Transit (trains/buses) in Japan

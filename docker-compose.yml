@@ -1,4 +1,3 @@
-
 services:
   transit-api:
     build:
