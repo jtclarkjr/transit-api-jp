@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-	// loadEnv()
 	router := router.NewRouter()
 
 	router.Use(middleware.Logger)
@@ -24,11 +23,3 @@ func main() {
 	fmt.Println("Starting server on :8080")
 	http.ListenAndServe(":8080", router)
 }
-
-// loadEnv loads environment variables from a .env file for local development.
-// func loadEnv() {
-// 	err := godotenv.Load(".env")
-// 	if err != nil {
-// 		fmt.Printf("Could not load: %v", err)
-// 	}
-// }
