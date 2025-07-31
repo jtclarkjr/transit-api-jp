@@ -37,7 +37,14 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 		channel <- ""
 		return
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Error closing response body for station %s: %v", station, err)
+			channel <- ""
+			return
+		}
+	}(response.Body)
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {

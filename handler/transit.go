@@ -66,7 +66,14 @@ func Transit() http.HandlerFunc {
 			http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
 			return
 		}
-		defer response.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				log.Printf("Error closing response body: %v", err)
+				http.Error(w, "Failed to close response body", http.StatusInternalServerError)
+				return
+			}
+		}(response.Body)
 
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -96,6 +103,9 @@ func Transit() http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(translatedBody)
+		_, err = w.Write(translatedBody)
+		if err != nil {
+			return
+		}
 	}
 }

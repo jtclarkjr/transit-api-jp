@@ -40,7 +40,14 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Error closing response body: %v", err)
+			http.Error(w, "Failed to close response body", http.StatusInternalServerError)
+			return
+		}
+	}(res.Body)
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		http.Error(w, "Failed to read response body", http.StatusInternalServerError)
@@ -88,7 +95,11 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(filteredBody)
+		_, err = w.Write(filteredBody)
+		if err != nil {
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -114,5 +125,9 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(filteredBody)
+	_, err = w.Write(filteredBody)
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
 }
