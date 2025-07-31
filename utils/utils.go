@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	models "transit-api/model"
+	"transit-api/model"
 
 	kanjikana "github.com/jtclarkjr/kanjikana"
 )
@@ -33,7 +33,7 @@ func KanjiToRomaji(text string) (string, error) {
 }
 
 // TranslateTypedTransitResponse translates Japanese text to Romaji in a typed TransitResponse struct
-func TranslateTypedTransitResponse(response *models.TransitResponse) error {
+func TranslateTypedTransitResponse(response *model.TransitResponse) error {
 	for i := range response.Items {
 		item := &response.Items[i]
 
@@ -119,7 +119,7 @@ func translateString(str *string) error {
 }
 
 // TranslateFilteredStations translates Japanese text to Romaji in filtered station items
-func TranslateFilteredStations(items []models.FilteredStation) error {
+func TranslateFilteredStations(items []model.FilteredStation) error {
 	for i := range items {
 		if err := translateString(&items[i].Name); err != nil {
 			return err

@@ -20,7 +20,7 @@ Uses NAVITIME API via RAPIDAPI
 
 ## Type System
 
-This API uses strongly-typed Go structs instead of `interface{}` (any) types for better type safety, performance, and maintainability. All API responses are properly structured using the types defined in `/models/transit.go`.
+This API uses strongly-typed Go structs instead of `interface{}` (any) types for better type safety, performance, and maintainability. All API responses are properly structured using the types defined in `/model/transit.go`.
 
 ### Key Type Structures
 
