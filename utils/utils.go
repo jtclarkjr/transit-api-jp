@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"transit-api/models"
+	models "transit-api/model"
 
 	kanjikana "github.com/jtclarkjr/kanjikana"
 )

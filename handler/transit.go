@@ -1,4 +1,4 @@
-package controllers
+package handler
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"transit-api/models"
+	"transit-api/model"
 	"transit-api/utils"
 )
 
@@ -49,7 +49,7 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 
 	// log.Printf("Response body for station %s: %s", station, string(body))
 
-	var data models.NodeResponse
+	var data model.NodeResponse
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Printf("Error unmarshaling response for station %s: %v", station, err)
 		channel <- ""
@@ -134,7 +134,7 @@ func Transit() http.HandlerFunc {
 			return
 		}
 
-		var responseData models.TransitResponse
+		var responseData model.TransitResponse
 		if err := json.Unmarshal(body, &responseData); err != nil {
 			http.Error(w, "Failed to parse JSON response", http.StatusInternalServerError)
 			return
