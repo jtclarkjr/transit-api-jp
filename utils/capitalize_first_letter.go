@@ -5,6 +5,7 @@ import (
 	"unicode"
 )
 
+// CapitalizeFirstLetter capitalizes the first letter of each part of a string
 func CapitalizeFirstLetter(text string) string {
 	// Split by parentheses
 	parts := strings.Split(text, "(")

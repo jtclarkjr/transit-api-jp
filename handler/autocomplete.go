@@ -12,6 +12,7 @@ import (
 	"transit-api/utils"
 )
 
+// Autocomplete handles autocomplete requests for station names
 func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")

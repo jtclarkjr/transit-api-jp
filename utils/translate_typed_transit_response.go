@@ -4,6 +4,7 @@ import (
 	"transit-api/model"
 )
 
+// TranslateTypedTransitResponse translates the names in a TransitResponse to Romaji if the language is English
 func TranslateTypedTransitResponse(response *model.TransitResponse) error {
 	for i := range response.Items {
 		item := &response.Items[i]

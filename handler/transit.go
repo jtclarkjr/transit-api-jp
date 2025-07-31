@@ -73,6 +73,7 @@ func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
 	channel <- nodeId
 }
 
+// Transit handles transit route requests
 func Transit() http.HandlerFunc {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSIT_HOST")
@@ -157,8 +158,5 @@ func Transit() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(translatedBody)
-
-		// elapsedTime := time.Since(startTime)
-		// log.Printf("Request processed in %s", elapsedTime)
 	}
 }
