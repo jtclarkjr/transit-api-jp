@@ -1,7 +1,7 @@
 package utils
 
 import (
-	kanjikana "github.com/jtclarkjr/kanjikana"
+	"github.com/jtclarkjr/kanjikana"
 )
 
 // KanjiToRomaji converts Kanji characters in a string to Romaji

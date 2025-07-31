@@ -58,7 +58,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If the language is English, translate station names to Romaji
-	// EN value uses ruby key value instead of name since kanji included city names in parenthesis
+	// EN value uses ruby key value instead of name since kanji included city names in parentheses
 	// EN still returns the name key with ruby value in Romaji though
 	if lang == "en" {
 		var filteredItemsEn []model.FilteredStation
