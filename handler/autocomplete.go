@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"transit-api/model"
 	"transit-api/utils"
 )
 
@@ -49,7 +50,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println("Response from RapidAPI:", string(body))
 
 	// Unmarshal the body into the structured response
-	var response models.AutocompleteResponse
+	var response model.AutocompleteResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		http.Error(w, "Failed to parse JSON response", http.StatusInternalServerError)
 		return
@@ -59,7 +60,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	// EN value uses ruby key value instead of name since kanji included city names in parenthesis
 	// EN still returns the name key with ruby value in Romaji though
 	if lang == "en" {
-		var filteredItemsEn []models.FilteredStation
+		var filteredItemsEn []model.FilteredStation
 		for _, item := range response.Items {
 			if len(item.Types) > 0 {
 				item.Type = item.Types[0]
@@ -72,14 +73,14 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Failed to translate station names", http.StatusInternalServerError)
 					return
 				}
-				filteredItemsEn = append(filteredItemsEn, models.FilteredStation{
+				filteredItemsEn = append(filteredItemsEn, model.FilteredStation{
 					ID:   item.ID,
 					Name: romajiValue,
 					Type: item.Type,
 				})
 			}
 		}
-		filteredResponse := models.FilteredAutocompleteResponse{Items: filteredItemsEn}
+		filteredResponse := model.FilteredAutocompleteResponse{Items: filteredItemsEn}
 		filteredBody, err := json.Marshal(filteredResponse)
 		if err != nil {
 			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
@@ -91,7 +92,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Non-English: keep previous logic
-	var filteredItems []models.FilteredStation
+	var filteredItems []model.FilteredStation
 	for _, item := range response.Items {
 		if len(item.Types) > 0 {
 			item.Type = item.Types[0]
@@ -99,12 +100,12 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 
 		// Only include items of type "station"
 		if item.Type == "station" {
-			filteredItem := models.FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
+			filteredItem := model.FilteredStation{ID: item.ID, Name: item.Name, Type: item.Type}
 			filteredItems = append(filteredItems, filteredItem)
 		}
 	}
 
-	filteredResponse := models.FilteredAutocompleteResponse{Items: filteredItems}
+	filteredResponse := model.FilteredAutocompleteResponse{Items: filteredItems}
 	filteredBody, err := json.Marshal(filteredResponse)
 	if err != nil {
 		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
