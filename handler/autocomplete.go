@@ -13,6 +13,17 @@ import (
 )
 
 // Autocomplete handles autocomplete requests for station names
+// @Summary Get station name suggestions
+// @Description Get autocomplete suggestions for station names with optional language translation
+// @Tags autocomplete
+// @Accept json
+// @Produce json
+// @Param word query string true "Search word for station names" example("東京")
+// @Param lang query string false "Language for response (en for English/Romaji)" example("en")
+// @Success 200 {object} model.FilteredAutocompleteResponse "Successful response with station suggestions"
+// @Failure 400 {string} string "Bad request - missing or invalid parameters"
+// @Failure 500 {string} string "Internal server error"
+// @Router /autocomplete [get]
 func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")

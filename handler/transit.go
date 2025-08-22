@@ -13,6 +13,19 @@ import (
 )
 
 // Transit handles transit route requests
+// @Summary Get transit routes between stations
+// @Description Get transit route options between two stations with optional language translation
+// @Tags transit
+// @Accept json
+// @Produce json
+// @Param start query string true "Starting station name" example("東京駅")
+// @Param goal query string true "Destination station name" example("新宿駅")
+// @Param start_time query string true "Start time in format YYYY-MM-DDTHH:MM:SS" example("2024-01-15T09:00:00")
+// @Param lang query string false "Language for response (en for English/Romaji)" example("en")
+// @Success 200 {object} model.TransitResponse "Successful response with transit routes"
+// @Failure 400 {string} string "Bad request - missing or invalid parameters"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transit [get]
 func Transit() http.HandlerFunc {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSIT_HOST")

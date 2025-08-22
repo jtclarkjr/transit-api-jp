@@ -18,6 +18,41 @@ Uses NAVITIME API via RAPIDAPI
 
 4. **Access the API** at [http://localhost:8080](http://localhost:8080)
 
+## API Documentation (Swagger)
+
+This API includes comprehensive Swagger/OpenAPI documentation for easy exploration and testing.
+
+### Accessing Swagger UI
+
+Once the server is running, you can access the interactive API documentation at:
+
+- **Swagger UI**: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+- **JSON Specification**: [http://localhost:8080/swagger/doc.json](http://localhost:8080/swagger/doc.json)
+
+### Generating Documentation
+
+If you need to regenerate the Swagger documentation after making changes to the API:
+
+1. **Install swag CLI** (if not already installed):
+   ```sh
+   go install github.com/swaggo/swag/cmd/swag@latest
+   ```
+
+2. **Generate docs** from the project root:
+   ```sh
+   swag init
+   ```
+
+This will create/update the `docs/` folder with the latest API documentation.
+
+### Features
+
+- **Interactive Testing**: Test API endpoints directly from the browser
+- **Request/Response Examples**: See example payloads for all endpoints
+- **Model Documentation**: Complete documentation of all data structures
+- **Parameter Validation**: Clear parameter requirements and constraints
+- **Multi-language Support**: Documentation includes both Japanese and English examples
+
 ## Type System
 
 This API uses strongly-typed Go structs instead of `interface{}` (any) types for better type safety, performance, and maintainability. All API responses are properly structured using the types defined in `/model/transit.go`.

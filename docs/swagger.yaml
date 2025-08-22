@@ -1,0 +1,380 @@
+basePath: /
+definitions:
+  model.Company:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  model.Coordinate:
+    properties:
+      lat:
+        type: number
+      lon:
+        type: number
+    type: object
+  model.Destination:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  model.Fare:
+    properties:
+      unit_0:
+        type: number
+      unit_48:
+        type: number
+      unit_128:
+        type: number
+      unit_128_train:
+        type: number
+      unit_130:
+        type: number
+      unit_130_train:
+        type: number
+      unit_133:
+        type: number
+      unit_133_train:
+        type: number
+      unit_136:
+        type: number
+      unit_138:
+        type: number
+      unit_141:
+        type: number
+    type: object
+  model.FareBreak:
+    properties:
+      unit_0:
+        type: boolean
+      unit_48:
+        type: boolean
+      unit_128:
+        type: boolean
+      unit_130:
+        type: boolean
+      unit_133:
+        type: boolean
+      unit_136:
+        type: boolean
+      unit_138:
+        type: boolean
+      unit_141:
+        type: boolean
+    type: object
+  model.FareDetail:
+    properties:
+      fare:
+        type: number
+      goal:
+        $ref: '#/definitions/model.Station'
+      id:
+        type: string
+      start:
+        $ref: '#/definitions/model.Station'
+    type: object
+  model.FilteredAutocompleteResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.FilteredStation'
+        type: array
+    type: object
+  model.FilteredStation:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      ruby:
+        type: string
+      type:
+        type: string
+    type: object
+  model.Link:
+    properties:
+      destination:
+        $ref: '#/definitions/model.Destination'
+      direction:
+        type: string
+      from:
+        $ref: '#/definitions/model.Station'
+      id:
+        type: string
+      is_timetable:
+        type: string
+      name:
+        type: string
+      to:
+        $ref: '#/definitions/model.Station'
+    type: object
+  model.Move:
+    properties:
+      distance:
+        type: integer
+      fare:
+        $ref: '#/definitions/model.Fare'
+      from_time:
+        type: string
+      move_type:
+        items:
+          type: string
+        type: array
+      time:
+        type: integer
+      to_time:
+        type: string
+      transit_count:
+        type: integer
+      type:
+        type: string
+    type: object
+  model.Numbering:
+    properties:
+      arrival:
+        items:
+          $ref: '#/definitions/model.StationNumber'
+        type: array
+      departure:
+        items:
+          $ref: '#/definitions/model.StationNumber'
+        type: array
+    type: object
+  model.Point:
+    properties:
+      coord:
+        $ref: '#/definitions/model.Coordinate'
+      name:
+        type: string
+      node_id:
+        type: string
+      node_types:
+        items:
+          type: string
+        type: array
+      numbering:
+        $ref: '#/definitions/model.Numbering'
+      type:
+        type: string
+    type: object
+  model.Section:
+    properties:
+      coord:
+        allOf:
+        - $ref: '#/definitions/model.Coordinate'
+        description: Point fields
+      distance:
+        type: integer
+      from_time:
+        type: string
+      line_name:
+        type: string
+      move:
+        type: string
+      name:
+        type: string
+      node_id:
+        type: string
+      node_types:
+        items:
+          type: string
+        type: array
+      numbering:
+        $ref: '#/definitions/model.Numbering'
+      time:
+        type: integer
+      to_time:
+        type: string
+      transport:
+        allOf:
+        - $ref: '#/definitions/model.Transport'
+        description: Move fields
+      type:
+        description: Common fields
+        type: string
+    type: object
+  model.Station:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  model.StationNumber:
+    properties:
+      number:
+        type: string
+      symbol:
+        type: string
+    type: object
+  model.Summary:
+    properties:
+      goal:
+        $ref: '#/definitions/model.Point'
+      move:
+        $ref: '#/definitions/model.Move'
+      "no":
+        type: string
+      start:
+        $ref: '#/definitions/model.Point'
+    type: object
+  model.TransitItem:
+    properties:
+      sections:
+        items:
+          $ref: '#/definitions/model.Section'
+        type: array
+      summary:
+        $ref: '#/definitions/model.Summary'
+    type: object
+  model.TransitResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.TransitItem'
+        type: array
+      unit:
+        $ref: '#/definitions/model.Unit'
+    type: object
+  model.Transport:
+    properties:
+      color:
+        type: string
+      company:
+        $ref: '#/definitions/model.Company'
+      fare:
+        $ref: '#/definitions/model.Fare'
+      fare_break:
+        $ref: '#/definitions/model.FareBreak'
+      fare_detail:
+        items:
+          $ref: '#/definitions/model.FareDetail'
+        type: array
+      fare_season:
+        type: string
+      id:
+        type: string
+      links:
+        items:
+          $ref: '#/definitions/model.Link'
+        type: array
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  model.Unit:
+    properties:
+      coord_unit:
+        type: string
+      currency:
+        type: string
+      datum:
+        type: string
+      distance:
+        type: string
+      time:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for Japanese transit route planning and station autocomplete
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Transit API JP
+  version: "1.0"
+paths:
+  /autocomplete:
+    get:
+      consumes:
+      - application/json
+      description: Get autocomplete suggestions for station names with optional language
+        translation
+      parameters:
+      - description: Search word for station names
+        example: '"東京"'
+        in: query
+        name: word
+        required: true
+        type: string
+      - description: Language for response (en for English/Romaji)
+        example: '"en"'
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with station suggestions
+          schema:
+            $ref: '#/definitions/model.FilteredAutocompleteResponse'
+        "400":
+          description: Bad request - missing or invalid parameters
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get station name suggestions
+      tags:
+      - autocomplete
+  /transit:
+    get:
+      consumes:
+      - application/json
+      description: Get transit route options between two stations with optional language
+        translation
+      parameters:
+      - description: Starting station name
+        example: '"東京駅"'
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: Destination station name
+        example: '"新宿駅"'
+        in: query
+        name: goal
+        required: true
+        type: string
+      - description: Start time in format YYYY-MM-DDTHH:MM:SS
+        example: '"2024-01-15T09:00:00"'
+        in: query
+        name: start_time
+        required: true
+        type: string
+      - description: Language for response (en for English/Romaji)
+        example: '"en"'
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with transit routes
+          schema:
+            $ref: '#/definitions/model.TransitResponse'
+        "400":
+          description: Bad request - missing or invalid parameters
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get transit routes between stations
+      tags:
+      - transit
+swagger: "2.0"
