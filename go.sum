@@ -28,8 +28,8 @@ github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8Hm
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/jtclarkjr/kanjikana v0.3.0 h1:UeKKdSUXK98qJ1DxoJnsFhW0rTZOHR9g5z8GuoBb4Oc=
 github.com/jtclarkjr/kanjikana v0.3.0/go.mod h1:XYvvEnazetNp96GMF6WE0/iDHUQZ/1VtM201wvtpwaM=
-github.com/jtclarkjr/router-go v0.3.2 h1:gKPKi0W2sG8OOjpeYeYVBK8YySNIyKCK7pePQh5MCqw=
-github.com/jtclarkjr/router-go v0.3.2/go.mod h1:XrZ+o5DzvCxEmPNHYTyZOXTb80E9rGc3X2Srr3UgZRA=
+github.com/jtclarkjr/router-go v0.4.0 h1:+zSOyGQz7a3zTj/QVjacQNg4J7LsPILBsl9Xl4DAHlw=
+github.com/jtclarkjr/router-go v0.4.0/go.mod h1:XrZ+o5DzvCxEmPNHYTyZOXTb80E9rGc3X2Srr3UgZRA=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=

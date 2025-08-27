@@ -32,19 +32,7 @@ func main() {
 	r := router.NewRouter()
 
 	// CORS middleware to allow all origins
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	})
-	r.Use(middleware.Logger)
+	r.Use(middleware.SimpleCORS())
 
 	r.Use(middleware.EnvVarChecker("RAPIDAPI_KEY", "RAPIDAPI_TRANSPORT_HOST", "RAPIDAPI_TRANSIT_HOST"))
 
@@ -57,6 +45,7 @@ func main() {
 
 	r.Use(middleware.RateLimiter)
 	r.Use(middleware.Throttle(100))
+	r.Use(middleware.Logger)
 	r.Get("/transit", handler.Transit())
 	r.Get("/autocomplete", handler.Autocomplete)
 
