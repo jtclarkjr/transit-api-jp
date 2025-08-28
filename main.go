@@ -42,17 +42,16 @@ func main() {
 	})
 	// Swagger UI - using wildcard pattern
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	// Handle Swagger assets that are requested without /swagger/ prefix
+	r.Get("/swagger-ui.css", httpSwagger.WrapHandler)
+	r.Get("/swagger-ui-bundle.js", httpSwagger.WrapHandler)
+	r.Get("/swagger-ui-standalone-preset.js", httpSwagger.WrapHandler)
 
 	r.Use(middleware.RateLimiter)
 	r.Use(middleware.Throttle(100))
 	r.Use(middleware.Logger)
 	r.Get("/transit", handler.Transit())
 	r.Get("/autocomplete", handler.Autocomplete)
-
-	// Handle Swagger assets that are requested without /swagger/ prefix
-	r.Get("/swagger-ui.css", httpSwagger.WrapHandler)
-	r.Get("/swagger-ui-bundle.js", httpSwagger.WrapHandler)
-	r.Get("/swagger-ui-standalone-preset.js", httpSwagger.WrapHandler)
 
 	fmt.Println("Starting server on :8080")
 	err := http.ListenAndServe(":8080", r)
