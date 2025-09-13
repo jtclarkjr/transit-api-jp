@@ -115,6 +115,8 @@ func Transit() http.HandlerFunc {
 			return
 		}
 
+		// println(string(translatedBody))
+
 		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(translatedBody)
 		if err != nil {
