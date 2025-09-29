@@ -49,7 +49,9 @@ func main() {
 
 	r.Use(middleware.RateLimiter)
 	r.Use(middleware.Throttle(100))
-	r.Use(middleware.Logger)
+	r.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		IncludeTimestamp: false,
+	}))
 	r.Get("/transit", handler.Transit())
 	r.Get("/autocomplete", handler.Autocomplete)
 
