@@ -7,13 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 	"transit-api/model"
 )
 
 // Used to GET nodeIds for transit request
-func fetchNodes(station string, channel chan<- string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func fetchNodes(station string, channel chan<- string) {
 
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")

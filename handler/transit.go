@@ -42,9 +42,12 @@ func Transit() http.HandlerFunc {
 		startChan := make(chan string, 1)
 		endChan := make(chan string, 1)
 
-		wg.Add(2)
-		go fetchNodes(startStation, startChan, &wg)
-		go fetchNodes(endStation, endChan, &wg)
+		wg.Go(func() {
+			fetchNodes(startStation, startChan)
+		})
+		wg.Go(func() {
+			fetchNodes(endStation, endChan)
+		})
 		wg.Wait()
 
 		startNode := <-startChan
