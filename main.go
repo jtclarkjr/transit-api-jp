@@ -38,7 +38,9 @@ func main() {
 
 	// Add a basic root route for testing
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Transit API JP - Server is running"))
+		if _, err := w.Write([]byte("Transit API JP - Server is running")); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 	})
 	// Swagger UI - using wildcard pattern
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
