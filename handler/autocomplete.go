@@ -16,9 +16,10 @@ import (
 	"github.com/jtclarkjr/router-go/middleware"
 )
 
-// Autocomplete cache with 5 minute TTL, max 5000 entries
+// Autocomplete cache with 30 day TTL, max 5000 entries
 // Cache key format: "word|lang"
-var autocompleteCache = cache.NewLRUCache(5000, 5*time.Minute)
+// Station names don't change, so long TTL is appropriate
+var autocompleteCache = cache.NewLRUCache(5000, 30*24*time.Hour)
 
 // Single flight to prevent duplicate in-flight requests
 var autocompleteSF = middleware.NewSingleFlight()
