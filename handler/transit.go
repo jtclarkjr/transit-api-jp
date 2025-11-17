@@ -8,9 +8,18 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
+	"transit-api/cache"
 	"transit-api/model"
 	"transit-api/utils"
+	
+	"github.com/jtclarkjr/router-go/middleware"
 )
+
+// Response cache with 5 minute TTL, max 1000 entries
+// Cache key format: "start|goal|time_rounded_to_minute|lang"
+// Timestamps are rounded to the nearest minute to improve cache hit rate
+var responseCache = cache.NewLRUCache(1000, 5*time.Minute)
 
 // Transit handles transit route requests
 // @Summary Get transit routes between stations
@@ -37,6 +46,28 @@ func Transit() http.HandlerFunc {
 		endStation := r.URL.Query().Get("goal")
 		startTimeStr := r.URL.Query().Get("start_time")
 		lang := r.URL.Query().Get("lang")
+
+		// Round timestamp to nearest minute for better cache hit rate
+		// e.g., 09:05:12 and 09:05:45 both cache as 09:05:00
+		roundedTime := startTimeStr
+		if parsedTime, err := time.Parse("2006-01-02T15:04:05", startTimeStr); err == nil {
+			roundedTime = parsedTime.Truncate(time.Minute).Format("2006-01-02T15:04:05")
+		}
+
+		// Check response cache first
+		cacheKey := fmt.Sprintf("%s|%s|%s|%s", startStation, endStation, roundedTime, lang)
+		if cached, ok := responseCache.Get(cacheKey); ok {
+			log.Printf("[CACHE HIT] Transit: key=%s", cacheKey)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Cache", "HIT")
+			_, err := w.Write(cached.([]byte))
+			if err != nil {
+				log.Printf("Error writing cached response: %v", err)
+			}
+			return
+		}
+
+		log.Printf("[CACHE MISS] Transit: key=%s, calling API...", cacheKey)
 
 		var wg sync.WaitGroup
 		startChan := make(chan string, 1)
@@ -68,16 +99,21 @@ func Transit() http.HandlerFunc {
 			startTimeStr,
 		)
 
-		request, err := http.NewRequest("GET", url, nil)
+	log.Printf("[API CALL] Transit: start=%s, goal=%s", startStation, endStation)
+	
+	// Rate limit external API call
+	middleware.SharedAPIRateLimiter.Wait()
+	
+	request, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			http.Error(w, "Failed to create request", http.StatusInternalServerError)
 			return
 		}
 
-		request.Header.Add("X-RapidAPI-Key", key)
-		request.Header.Add("X-RapidAPI-Host", host)
+	request.Header.Add("X-RapidAPI-Key", key)
+	request.Header.Add("X-RapidAPI-Host", host)
 
-		response, err := http.DefaultClient.Do(request)
+	response, err := middleware.SharedHTTPClient.Do(request)
 		if err != nil {
 			http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
 			return
@@ -112,16 +148,20 @@ func Transit() http.HandlerFunc {
 			}
 		}
 
-		translatedBody, err := json.Marshal(responseData)
-		if err != nil {
-			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
-			return
-		}
+	translatedBody, err := json.Marshal(responseData)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 
-		// println(string(translatedBody))
+	// Cache the response
+	responseCache.Set(cacheKey, translatedBody)
 
-		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(translatedBody)
+	// println(string(translatedBody))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
+	_, err = w.Write(translatedBody)
 		if err != nil {
 			return
 		}
