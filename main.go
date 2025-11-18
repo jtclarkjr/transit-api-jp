@@ -34,7 +34,7 @@ func main() {
 	// CORS middleware to allow all origins
 	r.Use(middleware.SimpleCORS())
 
-	r.Use(middleware.EnvVarChecker("RAPIDAPI_KEY", "RAPIDAPI_TRANSPORT_HOST", "RAPIDAPI_TRANSIT_HOST"))
+	r.Use(middleware.EnvVarChecker("RAPIDAPI_KEY", "RAPIDAPI_TRANSPORT_HOST", "RAPIDAPI_TRANSIT_HOST", "OPENAI_API_KEY"))
 
 	// Throttling for all API routes
 	// Throttle: limits concurrent in-flight requests to 1000
@@ -59,6 +59,7 @@ func main() {
 	r.Get("/swagger-ui-standalone-preset.js", httpSwagger.WrapHandler)
 	r.Get("/transit", handler.Transit())
 	r.Get("/autocomplete", handler.Autocomplete)
+	r.Post("/transit-agent", handler.TransitAgent)
 
 	fmt.Println("Starting server on :8080")
 	err := http.ListenAndServe(":8080", r)
