@@ -54,10 +54,12 @@ func TransitAgent(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Shorter, more direct prompt for faster processing
-	systemPrompt := `Find nearest train station to the location and suggest destination. Return JSON:
-{"start_station":"駅名","end_station":"駅名"}
-Both in Japanese with 駅 suffix.`
+	// Emphasize finding actual station names, not landmarks
+	systemPrompt := `You are a Japan transit expert. Given a location, find the ACTUAL nearest train/subway station name (not the location itself) as start_station, and suggest a realistic destination station as end_station.
+
+IMPORTANT: Both must be REAL station names that exist in Japan's rail network, not landmarks or places.
+Return ONLY JSON: {"start_station":"駅名","end_station":"駅名"}
+Both must end with 駅 suffix.`
 
 	// Optimize for speed: low temperature, limited tokens, structured output
 	params := openai.ChatCompletionNewParams{
@@ -65,9 +67,9 @@ Both in Japanese with 駅 suffix.`
 			openai.SystemMessage(systemPrompt),
 			openai.UserMessage(req.Prompt),
 		},
-		Model:               openai.ChatModelGPT4oMini,
-		Temperature:         openai.Float(0.0), // Deterministic for faster responses
-		MaxCompletionTokens: openai.Int(100),   // Limit output tokens (uses max_completion_tokens)
+		Model:               openai.ChatModelGPT4o,    // More accurate for station names
+		Temperature:         openai.Float(0.0),        // Deterministic
+		MaxCompletionTokens: openai.Int(150),          // Limit output tokens
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: &[]shared.ResponseFormatJSONObjectParam{shared.NewResponseFormatJSONObjectParam()}[0],
 		},
