@@ -21,9 +21,9 @@ type TransitAgentResponse struct {
 	EndStation   string `json:"end_station"`
 }
 
-// TransitAgent handles transit agent requests using OpenAI GPT-5
+// TransitAgent handles transit agent requests using OpenAI
 // @Summary Find nearest stations using AI
-// @Description Uses OpenAI GPT-5 to determine the nearest start and end stations based on a location prompt
+// @Description Uses OpenAI to determine the nearest start and end stations based on a location prompt
 // @Tags transit-agent
 // @Accept json
 // @Produce json
@@ -65,9 +65,9 @@ Both in Japanese with 駅 suffix.`
 			openai.SystemMessage(systemPrompt),
 			openai.UserMessage(req.Prompt),
 		},
-		Model:       openai.ChatModelGPT5Nano, // GPT-5 nano model
-		Temperature: openai.Float(0.0),        // Deterministic for faster responses
-		MaxTokens:   openai.Int(100),          // Limit output tokens
+		Model:               openai.ChatModelGPT4oMini,
+		Temperature:         openai.Float(0.0), // Deterministic for faster responses
+		MaxCompletionTokens: openai.Int(100),   // Limit output tokens (uses max_completion_tokens)
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: &[]shared.ResponseFormatJSONObjectParam{shared.NewResponseFormatJSONObjectParam()}[0],
 		},
