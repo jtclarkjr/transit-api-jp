@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/shared"
 )
 
 type TransitAgentRequest struct {
@@ -48,30 +50,27 @@ func TransitAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := openai.NewClient()
-	ctx := context.Background()
+	// Set a 10 second timeout for the API call
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	systemPrompt := `You are a Japanese transit assistant. Given a location or place mentioned by the user, find the nearest train/subway station to that place as the start station, and suggest a logical destination station based on common transit patterns in Japan.
+	// Shorter, more direct prompt for faster processing
+	systemPrompt := `Find nearest train station to the location and suggest destination. Return JSON:
+{"start_station":"駅名","end_station":"駅名"}
+Both in Japanese with 駅 suffix.`
 
-Your response must be ONLY a valid JSON object with no additional text, in this exact format:
-{
-  "start_station": "駅名（日本語）",
-  "end_station": "駅名（日本語）"
-}
-
-Rules:
-- Both station names must be in Japanese (kanji/hiragana)
-- Include 駅 suffix for station names
-- Choose realistic, commonly used stations in Japan
-- For the start station, find the nearest station to the mentioned location
-- For the end station, suggest a logical destination (major hub, tourist spot, or business district)
-- Return ONLY the JSON object, no explanations or additional text`
-
+	// Optimize for speed: low temperature, limited tokens, structured output
 	params := openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(systemPrompt),
 			openai.UserMessage(req.Prompt),
 		},
-		Model: openai.ChatModelGPT5Nano,
+		Model:       openai.ChatModelGPT5Nano, // GPT-5 nano model
+		Temperature: openai.Float(0.0),        // Deterministic for faster responses
+		MaxTokens:   openai.Int(100),          // Limit output tokens
+		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
+			OfJSONObject: &[]shared.ResponseFormatJSONObjectParam{shared.NewResponseFormatJSONObjectParam()}[0],
+		},
 	}
 
 	completion, err := client.Chat.Completions.New(ctx, params)
