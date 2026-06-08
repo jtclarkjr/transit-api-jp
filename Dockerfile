@@ -1,5 +1,5 @@
 # Use the official Golang image as the build stage
-ARG GO_VERSION=1.25.1
+ARG GO_VERSION=1.26.4
 FROM golang:${GO_VERSION}-bookworm AS builder
 
 # Set the working directory

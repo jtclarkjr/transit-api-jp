@@ -34,16 +34,17 @@ func main() {
 	// CORS middleware to allow all origins
 	r.Use(middleware.SimpleCORS())
 
-	r.Use(middleware.EnvVarChecker("RAPIDAPI_KEY", "RAPIDAPI_TRANSPORT_HOST", "RAPIDAPI_TRANSIT_HOST", "OPENAI_API_KEY"))
+	r.Use(middleware.EnvVarChecker("RAPIDAPI_KEY", "RAPIDAPI_TRANSPORT_HOST", "RAPIDAPI_TRANSIT_HOST", "OPENAI_API_KEY", "OPENAI_PROXY_APP_TOKEN"))
 
 	// Throttling for all API routes
 	// Throttle: limits concurrent in-flight requests to 1000
 	// Note: Rate limiting is now applied per API call (not per request) in handlers
 	// Cached responses bypass rate limiting entirely
 	r.Use(middleware.Throttle(1000))
-	r.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		IncludeTimestamp: false,
-	}))
+	// r.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+	// 	IncludeTimestamp: true,
+	// }))
+	r.Use(middleware.Logger)
 
 	// Add a basic root route for testing
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +60,9 @@ func main() {
 	r.Get("/swagger-ui-standalone-preset.js", httpSwagger.WrapHandler)
 	r.Get("/transit", handler.Transit())
 	r.Get("/autocomplete", handler.Autocomplete)
-	r.Post("/transit-agent", handler.TransitAgent)
+	r.Post("/transit-agent", handler.RequireAppToken(handler.TransitAgent))
+	r.Post("/voice/speech", handler.RequireAppToken(handler.VoiceSpeech))
+	r.Post("/voice/transcribe", handler.RequireAppToken(handler.VoiceTranscribe))
 
 	fmt.Println("Starting server on :8080")
 	err := http.ListenAndServe(":8080", r)

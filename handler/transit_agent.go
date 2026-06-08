@@ -67,9 +67,9 @@ Both must end with 駅 suffix.`
 			openai.SystemMessage(systemPrompt),
 			openai.UserMessage(req.Prompt),
 		},
-		Model:               openai.ChatModelGPT4o,    // More accurate for station names
-		Temperature:         openai.Float(0.0),        // Deterministic
-		MaxCompletionTokens: openai.Int(150),          // Limit output tokens
+		Model:               openai.ChatModelGPT4o, // More accurate for station names
+		Temperature:         openai.Float(0.0),     // Deterministic
+		MaxCompletionTokens: openai.Int(150),       // Limit output tokens
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: &[]shared.ResponseFormatJSONObjectParam{shared.NewResponseFormatJSONObjectParam()}[0],
 		},

@@ -8,7 +8,17 @@ Uses NAVITIME API via RAPIDAPI
 
 1. **Ensure you have Docker and Docker Compose installed.**
 
-2. **Create a `.env` file** in the project root with your required environment variables (e.g., RAPIDAPI_KEY, RAPIDAPI_TRANSPORT_HOST, RAPIDAPI_TRANSIT_HOST).
+2. **Create a `.env` file** in the project root with your required environment variables:
+
+   ```sh
+   RAPIDAPI_KEY=""
+   RAPIDAPI_TRANSPORT_HOST="navitime-transport.p.rapidapi.com"
+   RAPIDAPI_TRANSIT_HOST="navitime-route-totalnavi.p.rapidapi.com"
+   OPENAI_API_KEY=""
+   OPENAI_PROXY_APP_TOKEN=""
+   ```
+
+   `OPENAI_PROXY_APP_TOKEN` must match the iOS app's `TRANSIT_API_APP_TOKEN` value.
 
 3. **Build and run the service:**
 
@@ -131,3 +141,13 @@ Each station includes:
 - **ID**: Unique station identifier
 - **Name**: Station name (translated to Romaji if `lang=en`)
 - **Type**: Always "station" (other node types are filtered out)
+
+## OpenAI-backed App Endpoints
+
+These endpoints require the `X-Transit-App-Token` header. The header value must match `OPENAI_PROXY_APP_TOKEN`.
+
+- `POST /transit-agent` parses a natural-language route prompt into start and end stations.
+- `POST /voice/speech` accepts JSON `{ "text": "...", "language": "ja" | "en" }` and returns MP3 audio.
+- `POST /voice/transcribe` accepts multipart form data with `file` and `language`, and returns `{ "text": "..." }`.
+
+The OpenAI API key stays on this backend and should never be configured in the iOS app.
