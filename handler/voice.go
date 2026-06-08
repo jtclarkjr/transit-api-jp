@@ -205,7 +205,7 @@ Return only the final spoken script. Do not include notes, labels, markdown, or 
 			openai.SystemMessage(systemPrompt),
 			openai.UserMessage(routeScript),
 		},
-		Model:               openai.ChatModelGPT5Mini,
+		Model:               openai.ChatModelGPT4oMini,
 		Temperature:         openai.Float(0.2),
 		MaxCompletionTokens: openai.Int(900),
 	})
