@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -28,8 +29,8 @@ var responseCache = cache.NewLRUCache(1000, 5*time.Minute)
 // @Tags transit
 // @Accept json
 // @Produce json
-// @Param start query string true "Starting station name" example("東京駅")
-// @Param goal query string true "Destination station name" example("新宿駅")
+// @Param start query string true "Starting station name in Japanese or autocomplete node ID" example("東京駅")
+// @Param goal query string true "Destination station name in Japanese or autocomplete node ID" example("新宿駅")
 // @Param start_time query string true "Start time in format YYYY-MM-DDTHH:MM:SS" example("2024-01-15T09:00:00")
 // @Param lang query string false "Language for response (en for English/Romaji)" example("en")
 // @Param ai_translate query bool false "Use OpenAI translation when lang=en; requires X-Transit-App-Token" example(false)
@@ -91,34 +92,36 @@ func Transit() http.HandlerFunc {
 		log.Printf("[CACHE MISS] Transit: key=%s, calling API...", cacheKey)
 
 		var wg sync.WaitGroup
-		startChan := make(chan string, 1)
-		endChan := make(chan string, 1)
+		startChan := make(chan nodeResult, 1)
+		endChan := make(chan nodeResult, 1)
 
 		wg.Go(func() {
-			fetchNodes(startStation, startChan)
+			nodeID, err := resolveTransitNode(startStation)
+			startChan <- nodeResult{nodeID: nodeID, err: err}
 		})
 		wg.Go(func() {
-			fetchNodes(endStation, endChan)
+			nodeID, err := resolveTransitNode(endStation)
+			endChan <- nodeResult{nodeID: nodeID, err: err}
 		})
 		wg.Wait()
 
-		startNode := <-startChan
-		endNode := <-endChan
+		startResult := <-startChan
+		endResult := <-endChan
 		close(startChan)
 		close(endChan)
 
-		if startNode == "" || endNode == "" {
-			http.Error(w, "Failed to fetch nodes", http.StatusInternalServerError)
+		if startResult.err != nil {
+			log.Printf("Failed to resolve start node: %v", startResult.err)
+			http.Error(w, startResult.err.Error(), http.StatusBadRequest)
+			return
+		}
+		if endResult.err != nil {
+			log.Printf("Failed to resolve goal node: %v", endResult.err)
+			http.Error(w, endResult.err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		url := fmt.Sprintf(
-			"https://%s/route_transit?start=%s&goal=%s&start_time=%s&limit=5",
-			host,
-			startNode,
-			endNode,
-			startTimeStr,
-		)
+		url := buildTransitRouteURL(host, startResult.nodeID, endResult.nodeID, startTimeStr)
 
 		log.Printf("[API CALL] Transit: start=%s, goal=%s", startStation, endStation)
 
@@ -211,4 +214,20 @@ func Transit() http.HandlerFunc {
 			return
 		}
 	}
+}
+
+func buildTransitRouteURL(host, startNode, endNode, startTime string) string {
+	values := url.Values{}
+	values.Set("start", startNode)
+	values.Set("goal", endNode)
+	values.Set("start_time", startTime)
+	values.Set("limit", "5")
+
+	u := url.URL{
+		Scheme:   "https",
+		Host:     host,
+		Path:     "/route_transit",
+		RawQuery: values.Encode(),
+	}
+	return u.String()
 }

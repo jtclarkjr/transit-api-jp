@@ -88,7 +88,7 @@ For English responses (`lang=en`), the API automatically translates Japanese sta
 
 ## Transit
 
-Calls go transit enpoint with start, goal and start date. Return all data from those two point.
+Calls go transit endpoint with start, goal and start date. Return all data from those two points. `start` and `goal` can be Japanese station names or node IDs returned by `/autocomplete`. When the UI displays translated names, pass the autocomplete `id`, not the translated display name.
 
 ### JA
 

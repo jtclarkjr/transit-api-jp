@@ -24,3 +24,11 @@ func TestTransitRejectsInvalidStartTime(t *testing.T) {
 		t.Fatalf("body = %q, want start_time validation error", recorder.Body.String())
 	}
 }
+
+func TestBuildTransitRouteURLEncodesStartTime(t *testing.T) {
+	got := buildTransitRouteURL("example.test", "00004212", "00005975", "2026-06-09T18:01:00")
+
+	if !strings.Contains(got, "start_time=2026-06-09T18%3A01%3A00") {
+		t.Fatalf("URL = %q, want encoded start_time query", got)
+	}
+}

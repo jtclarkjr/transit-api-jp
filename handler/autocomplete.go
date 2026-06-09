@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -96,11 +97,7 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 
 // fetchAutocomplete performs the actual API call and processing
 func fetchAutocomplete(ctx context.Context, word string, translationMode translationMode, key, host string) ([]byte, error) {
-	url := fmt.Sprintf(
-		"https://%s/transport_node/autocomplete?word=%s&word_match=prefix",
-		host,
-		word,
-	)
+	url := buildAutocompleteURL(host, word)
 
 	log.Printf("[API CALL] Autocomplete: word=%s, translation_mode=%s", word, translationMode)
 
@@ -173,4 +170,18 @@ func fetchAutocomplete(ctx context.Context, word string, translationMode transla
 
 	filteredResponse := model.FilteredAutocompleteResponse{Items: filteredItems}
 	return json.Marshal(filteredResponse)
+}
+
+func buildAutocompleteURL(host, word string) string {
+	values := url.Values{}
+	values.Set("word", word)
+	values.Set("word_match", "prefix")
+
+	u := url.URL{
+		Scheme:   "https",
+		Host:     host,
+		Path:     "/transport_node/autocomplete",
+		RawQuery: values.Encode(),
+	}
+	return u.String()
 }

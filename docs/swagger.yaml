@@ -349,13 +349,13 @@ paths:
       description: Get transit route options between two stations with optional language
         translation
       parameters:
-      - description: Starting station name
+      - description: Starting station name in Japanese or autocomplete node ID
         example: '"東京駅"'
         in: query
         name: start
         required: true
         type: string
-      - description: Destination station name
+      - description: Destination station name in Japanese or autocomplete node ID
         example: '"新宿駅"'
         in: query
         name: goal

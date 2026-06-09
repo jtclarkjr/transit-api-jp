@@ -112,7 +112,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "\"東京駅\"",
-                        "description": "Starting station name",
+                        "description": "Starting station name in Japanese or autocomplete node ID",
                         "name": "start",
                         "in": "query",
                         "required": true
@@ -120,7 +120,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "\"新宿駅\"",
-                        "description": "Destination station name",
+                        "description": "Destination station name in Japanese or autocomplete node ID",
                         "name": "goal",
                         "in": "query",
                         "required": true

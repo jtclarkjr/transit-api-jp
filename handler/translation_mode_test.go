@@ -58,3 +58,14 @@ func TestHasValidAppToken(t *testing.T) {
 		t.Fatal("request with matching app token should be valid")
 	}
 }
+
+func TestHasValidAppTokenRequiresTokenForLocalRequests(t *testing.T) {
+	t.Setenv("OPENAI_PROXY_APP_TOKEN", "secret")
+
+	req := httptest.NewRequest("GET", "http://localhost:8080/transit?lang=en&ai_translate=true", nil)
+	req.RemoteAddr = "127.0.0.1:51234"
+
+	if hasValidAppToken(req) {
+		t.Fatal("local request without app token should be invalid")
+	}
+}
