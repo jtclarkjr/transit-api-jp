@@ -12,8 +12,11 @@ const (
 	maxSpeechInputCharacters       = 4096
 	maxSpeechStreamChunkCharacters = 650
 	maxSpeechSessions              = 200
+	maxSpeechCacheEntries          = 100
+	maxSpeechCacheBytes            = 50 * 1024 * 1024
 	maxTranscriptionBytes          = 20 * 1024 * 1024
 	speechSessionTTL               = 5 * time.Minute
+	speechAudioCacheTTL            = 30 * time.Minute
 )
 
 type SpeechRequest struct {
@@ -32,6 +35,7 @@ type TranscriptionResponse struct {
 type speechSession struct {
 	Text      string
 	Language  string
+	CacheKey  string
 	ExpiresAt time.Time
 }
 

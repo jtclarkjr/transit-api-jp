@@ -36,12 +36,13 @@ func SpeechSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := storeSpeechSession(text, language)
+	id, entry, err := storeSpeechSession(text, language)
 	if err != nil {
 		log.Printf("Speech session error: %v", err)
 		http.Error(w, "Failed to create speech session", http.StatusInternalServerError)
 		return
 	}
+	ensureSpeechAudioGeneration(entry)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(SpeechSessionResponse{ID: id}); err != nil {
@@ -50,21 +51,25 @@ func SpeechSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func storeSpeechSession(text, language string) (string, error) {
+func storeSpeechSession(text, language string) (string, *speechAudioCacheEntry, error) {
 	now := time.Now()
+	entry, err := getOrCreateSpeechAudioCacheEntry(text, language)
+	if err != nil {
+		return "", nil, err
+	}
 
 	speechSessions.Lock()
 	defer speechSessions.Unlock()
 
 	cleanupSpeechSessionsLocked(now)
 	if len(speechSessions.values) >= maxSpeechSessions {
-		return "", errors.New("too many active speech sessions")
+		return "", nil, errors.New("too many active speech sessions")
 	}
 
 	for range 3 {
 		id, err := newSpeechSessionID()
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 
 		if _, exists := speechSessions.values[id]; exists {
@@ -74,12 +79,13 @@ func storeSpeechSession(text, language string) (string, error) {
 		speechSessions.values[id] = speechSession{
 			Text:      text,
 			Language:  language,
+			CacheKey:  entry.Key,
 			ExpiresAt: now.Add(speechSessionTTL),
 		}
-		return id, nil
+		return id, entry, nil
 	}
 
-	return "", errors.New("failed to allocate unique speech session id")
+	return "", nil, errors.New("failed to allocate unique speech session id")
 }
 
 func loadSpeechSession(id string) (speechSession, bool) {

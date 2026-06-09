@@ -2,14 +2,11 @@ package voice
 
 import (
 	"context"
-	"io"
+	"errors"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
-
-	"github.com/openai/openai-go/v3"
 )
 
 // SpeechStream streams generated speech audio for an existing session.
@@ -26,11 +23,6 @@ import (
 // @Failure 502 {string} string "OpenAI upstream error"
 // @Router /voice/speech-stream [get]
 func SpeechStream(w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("OPENAI_API_KEY") == "" {
-		http.Error(w, "OPENAI_API_KEY not configured", http.StatusInternalServerError)
-		return
-	}
-
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	if id == "" {
 		http.Error(w, "Speech session id is required", http.StatusBadRequest)
@@ -43,53 +35,52 @@ func SpeechStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	streamSpeechChunks(w, r, session)
-}
-
-func streamSpeechChunks(w http.ResponseWriter, r *http.Request, session speechSession) {
-	chunks := speechChunks(session.Text)
-	if len(chunks) == 0 {
-		http.Error(w, "Text is required", http.StatusBadRequest)
+	entry, err := speechAudioEntryForSession(session)
+	if err != nil {
+		log.Printf("Speech cache error: %v", err)
+		http.Error(w, "Failed to load speech audio", http.StatusInternalServerError)
 		return
 	}
 
-	client := openai.NewClient()
+	streamSpeechAudioCache(w, r, entry)
+}
+
+func speechAudioEntryForSession(session speechSession) (*speechAudioCacheEntry, error) {
+	if session.CacheKey != "" {
+		if entry, ok := loadSpeechAudioCacheEntry(session.CacheKey); ok {
+			ensureSpeechAudioGeneration(entry)
+			return entry, nil
+		}
+	}
+
+	entry, err := getOrCreateSpeechAudioCacheEntry(session.Text, session.Language)
+	if err != nil {
+		return nil, err
+	}
+	ensureSpeechAudioGeneration(entry)
+	return entry, nil
+}
+
+func streamSpeechAudioCache(w http.ResponseWriter, r *http.Request, entry *speechAudioCacheEntry) {
 	flusher, _ := w.(http.Flusher)
 	wroteHeader := false
 	startedAt := time.Now()
 
-	for index, chunk := range chunks {
-		chunkStartedAt := time.Now()
-		spokenChunk := chunk
-		if session.Language == "en" {
-			ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-			var err error
-			spokenChunk, err = rewriteEnglishRouteScript(ctx, client, chunk)
-			cancel()
-			if err != nil {
-				log.Printf("OpenAI route script chunk rewrite error: chunk=%d/%d err=%v", index+1, len(chunks), err)
-				if !wroteHeader {
-					http.Error(w, "Failed to rewrite speech text", http.StatusBadGateway)
-				}
+	for index := 0; ; index++ {
+		chunk, done, err := waitForSpeechAudioChunk(r.Context(), entry, index)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return
 			}
-		}
-
-		if len([]rune(spokenChunk)) > maxSpeechInputCharacters {
-			log.Printf("Speech chunk too long after rewrite: chunk=%d/%d chars=%d", index+1, len(chunks), len([]rune(spokenChunk)))
+			log.Printf("Speech stream cache error: key=%s chunk=%d err=%v", entry.Key, index+1, err)
 			if !wroteHeader {
-				http.Error(w, "Speech text is too long", http.StatusBadRequest)
+				http.Error(w, "Failed to generate speech", http.StatusBadGateway)
 			}
 			return
 		}
-
-		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-		response, err := newSpeechResponse(ctx, client, spokenChunk, session.Language)
-		if err != nil {
-			cancel()
-			log.Printf("OpenAI speech stream error: chunk=%d/%d err=%v", index+1, len(chunks), err)
+		if done {
 			if !wroteHeader {
-				http.Error(w, "Failed to generate speech", http.StatusBadGateway)
+				http.Error(w, "Speech audio is empty", http.StatusBadGateway)
 			}
 			return
 		}
@@ -104,21 +95,45 @@ func streamSpeechChunks(w http.ResponseWriter, r *http.Request, session speechSe
 			}
 		}
 
-		_, copyErr := io.Copy(w, response.Body)
-		closeErr := response.Body.Close()
-		cancel()
-		if copyErr != nil {
-			log.Printf("Error writing speech stream chunk: chunk=%d/%d err=%v", index+1, len(chunks), copyErr)
+		if _, err := w.Write(chunk); err != nil {
+			log.Printf("Error writing speech stream chunk: key=%s chunk=%d err=%v", entry.Key, index+1, err)
 			return
-		}
-		if closeErr != nil {
-			log.Printf("Error closing speech stream chunk: chunk=%d/%d err=%v", index+1, len(chunks), closeErr)
 		}
 		if flusher != nil {
 			flusher.Flush()
 		}
 
-		log.Printf("[VOICE STREAM] chunk=%d/%d source_chars=%d elapsed=%s total=%s", index+1, len(chunks), len([]rune(chunk)), time.Since(chunkStartedAt), time.Since(startedAt))
+		log.Printf("[VOICE STREAM] key=%s chunk=%d bytes=%d total=%s", entry.Key, index+1, len(chunk), time.Since(startedAt))
+	}
+}
+
+func waitForSpeechAudioChunk(ctx context.Context, entry *speechAudioCacheEntry, index int) ([]byte, bool, error) {
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		entry.mu.Lock()
+		if index < len(entry.chunks) {
+			chunk := append([]byte(nil), entry.chunks[index]...)
+			entry.mu.Unlock()
+			return chunk, false, nil
+		}
+		done := entry.done
+		err := entry.err
+		entry.mu.Unlock()
+
+		if err != nil {
+			return nil, true, err
+		}
+		if done {
+			return nil, true, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, false, ctx.Err()
+		case <-ticker.C:
+		}
 	}
 }
 
