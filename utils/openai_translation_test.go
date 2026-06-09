@@ -102,3 +102,21 @@ func TestTranslateStringRefsWithBatchTranslatorDoesNotCacheIncompleteResults(t *
 		t.Fatal("incomplete translation was cached")
 	}
 }
+
+func TestTranslateStringRefsWithBatchTranslatorUsesTranslatorOutputWithoutRomajiFallback(t *testing.T) {
+	openAITranslationCache.Clear()
+
+	source := "押上[スカイツリー前]"
+	translator := func(_ context.Context, phrases []string) (map[string]string, error) {
+		return map[string]string{
+			phrases[0]: "openai output",
+		}, nil
+	}
+
+	if err := translateStringRefsWithBatchTranslator(context.Background(), []*string{&source}, translator); err != nil {
+		t.Fatalf("translateStringRefsWithBatchTranslator returned error: %v", err)
+	}
+	if source != "openai output" {
+		t.Fatalf("source = %q, want exact translator output", source)
+	}
+}

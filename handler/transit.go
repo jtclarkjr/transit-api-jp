@@ -52,6 +52,15 @@ func Transit() http.HandlerFunc {
 		lang := r.URL.Query().Get("lang")
 		translationMode := parseTranslationMode(lang, r.URL.Query().Get("ai_translate"))
 
+		if startStation == "" {
+			http.Error(w, "start is required", http.StatusBadRequest)
+			return
+		}
+		if endStation == "" {
+			http.Error(w, "goal is required", http.StatusBadRequest)
+			return
+		}
+
 		if requiresAppTokenForTranslation(translationMode) && !hasValidAppToken(r) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -59,10 +68,12 @@ func Transit() http.HandlerFunc {
 
 		// Round timestamp to nearest minute for better cache hit rate
 		// e.g., 09:05:12 and 09:05:45 both cache as 09:05:00
-		roundedTime := startTimeStr
-		if parsedTime, err := time.Parse("2006-01-02T15:04:05", startTimeStr); err == nil {
-			roundedTime = parsedTime.Truncate(time.Minute).Format("2006-01-02T15:04:05")
+		parsedTime, err := time.Parse("2006-01-02T15:04:05", startTimeStr)
+		if err != nil {
+			http.Error(w, "start_time must use format YYYY-MM-DDTHH:MM:SS", http.StatusBadRequest)
+			return
 		}
+		roundedTime := parsedTime.Truncate(time.Minute).Format("2006-01-02T15:04:05")
 
 		// Check response cache first
 		cacheKey := fmt.Sprintf("%s|%s|%s|%s", startStation, endStation, roundedTime, translationCacheVariant(lang, translationMode))
@@ -140,6 +151,21 @@ func Transit() http.HandlerFunc {
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			http.Error(w, "Failed to read response", http.StatusInternalServerError)
+			return
+		}
+		if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+			log.Printf("Transit upstream error: status=%d body=%s", response.StatusCode, string(body))
+			http.Error(w, "Transit upstream error", http.StatusBadGateway)
+			return
+		}
+
+		var upstreamError struct {
+			StatusCode int    `json:"status_code"`
+			Message    string `json:"message"`
+		}
+		if err := json.Unmarshal(body, &upstreamError); err == nil && upstreamError.StatusCode != 0 {
+			log.Printf("Transit upstream error: status_code=%d message=%s body=%s", upstreamError.StatusCode, upstreamError.Message, string(body))
+			http.Error(w, "Transit upstream error", http.StatusBadGateway)
 			return
 		}
 

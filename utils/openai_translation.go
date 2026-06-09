@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	openAITranslationCacheVersion = "ja-en:v1:"
+	openAITranslationCacheVersion = "ja-en:v2:"
 	openAITranslationBatchSize    = 50
 )
 
@@ -105,8 +105,10 @@ func translatePhrasesWithOpenAI(ctx context.Context, phrases []string) (map[stri
 	}
 
 	systemPrompt := `Convert Japanese transit station, line, company, destination, and place names into polished English-facing romanized display names.
-Do not translate the meaning of proper names. Romanize the proper-name part and only convert generic transit suffixes when natural: 駅 -> Station, 線 -> Line, 方面 -> bound for/toward.
+Do not translate the meaning of proper names. Romanize the proper-name part and only convert generic transit suffixes or locators when natural: 駅 -> Station, 線 -> Line, 方面 -> bound for/toward, 前 -> front.
+Keep bracketed or parenthetical qualifiers separate with a space before the bracket. Do not concatenate bracketed text into the main name.
 For example, 日の出駅 must become Hinode Station, not Sunrise Station or Hinodeeki.
+For example, 押上[スカイツリー前] must become Oshiage [Skytree front], not Oshiagesukaitsuri-mae.
 Return only a JSON object where each key is one exact input string and each value is its romanized display name.
 Convert every input string. Preserve route numbers, platform labels, train service names, and direction names accurately.`
 

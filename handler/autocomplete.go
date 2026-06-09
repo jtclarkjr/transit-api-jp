@@ -144,7 +144,7 @@ func fetchAutocomplete(ctx context.Context, word string, translationMode transla
 			name := item.Name
 			if translationMode == translationModeRomaji {
 				var err error
-				name, err = utils.KanjiToRomaji(item.Ruby)
+				name, err = utils.RomajiDisplayName(item.Name)
 				if err != nil {
 					return nil, fmt.Errorf("failed to translate station name: %w", err)
 				}
