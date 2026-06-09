@@ -84,7 +84,7 @@ This API uses strongly-typed Go structs instead of `interface{}` (any) types for
 
 ## Translation System
 
-For English responses (`lang=en`), the API automatically translates Japanese station names, company names, and line names from Kanji/Kana to Romaji using the `github.com/jtclarkjr/kanjikana` package. The translation system recursively processes all relevant text fields in the response structure.
+For English responses (`lang=en`), the API automatically translates Japanese station names, company names, and line names from Kanji/Kana to Romaji using the `github.com/jtclarkjr/kanjikana` package. To use OpenAI for more polished romanized display names, pass `ai_translate=true` with `lang=en` and include the `X-Transit-App-Token` header. OpenAI phrase translations are cached in memory to avoid repeat translation work.
 
 ## Transit
 
@@ -101,6 +101,10 @@ Need to add `lang=en` param to get english names
 `/transit?lang=en&start={station_name}&goal={station_name}&start_time={start_time} (datetime format: 2020-08-19T10%3A00%3A00)`
 
 Tokenize the kanji to kana then convert the kana to romaji
+
+For OpenAI-refined romanized names:
+
+`/transit?lang=en&ai_translate=true&start={station_name}&goal={station_name}&start_time={start_time} (requires X-Transit-App-Token)`
 
 ### Response Structure
 
@@ -130,6 +134,10 @@ Need to add `lang=en` param to get english names
 
 Tokenize the kanji to kana then convert the kana to romaji
 
+For OpenAI-refined romanized names:
+
+`/autocomplete?lang=en&ai_translate=true&word=station_name (requires X-Transit-App-Token)`
+
 ### Response Structure
 
 The autocomplete API returns a `FilteredAutocompleteResponse` containing:
@@ -144,7 +152,7 @@ Each station includes:
 
 ## OpenAI-backed App Endpoints
 
-These endpoints require the `X-Transit-App-Token` header. The header value must match `OPENAI_PROXY_APP_TOKEN`.
+These endpoints and `ai_translate=true` query requests require the `X-Transit-App-Token` header. The header value must match `OPENAI_PROXY_APP_TOKEN`.
 
 - `POST /transit-agent` parses a natural-language route prompt into start and end stations.
 - `POST /voice/speech` accepts JSON `{ "text": "...", "language": "ja" | "en" }` and returns MP3 audio.

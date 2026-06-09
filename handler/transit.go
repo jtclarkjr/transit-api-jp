@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,12 +13,12 @@ import (
 	"transit-api/cache"
 	"transit-api/model"
 	"transit-api/utils"
-	
+
 	"github.com/jtclarkjr/router-go/middleware"
 )
 
 // Response cache with 5 minute TTL, max 1000 entries
-// Cache key format: "start|goal|time_rounded_to_minute|lang"
+// Cache key format: "start|goal|time_rounded_to_minute|lang:translation_mode"
 // Timestamps are rounded to the nearest minute to improve cache hit rate
 var responseCache = cache.NewLRUCache(1000, 5*time.Minute)
 
@@ -31,8 +32,11 @@ var responseCache = cache.NewLRUCache(1000, 5*time.Minute)
 // @Param goal query string true "Destination station name" example("新宿駅")
 // @Param start_time query string true "Start time in format YYYY-MM-DDTHH:MM:SS" example("2024-01-15T09:00:00")
 // @Param lang query string false "Language for response (en for English/Romaji)" example("en")
+// @Param ai_translate query bool false "Use OpenAI translation when lang=en; requires X-Transit-App-Token" example(false)
 // @Success 200 {object} model.TransitResponse "Successful response with transit routes"
 // @Failure 400 {string} string "Bad request - missing or invalid parameters"
+// @Failure 401 {string} string "Unauthorized - missing or invalid app token for AI translation"
+// @Failure 502 {string} string "OpenAI upstream translation error"
 // @Failure 500 {string} string "Internal server error"
 // @Router /transit [get]
 func Transit() http.HandlerFunc {
@@ -46,6 +50,12 @@ func Transit() http.HandlerFunc {
 		endStation := r.URL.Query().Get("goal")
 		startTimeStr := r.URL.Query().Get("start_time")
 		lang := r.URL.Query().Get("lang")
+		translationMode := parseTranslationMode(lang, r.URL.Query().Get("ai_translate"))
+
+		if requiresAppTokenForTranslation(translationMode) && !hasValidAppToken(r) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
 		// Round timestamp to nearest minute for better cache hit rate
 		// e.g., 09:05:12 and 09:05:45 both cache as 09:05:00
@@ -55,7 +65,7 @@ func Transit() http.HandlerFunc {
 		}
 
 		// Check response cache first
-		cacheKey := fmt.Sprintf("%s|%s|%s|%s", startStation, endStation, roundedTime, lang)
+		cacheKey := fmt.Sprintf("%s|%s|%s|%s", startStation, endStation, roundedTime, translationCacheVariant(lang, translationMode))
 		if cached, ok := responseCache.Get(cacheKey); ok {
 			log.Printf("[CACHE HIT] Transit: key=%s", cacheKey)
 			w.Header().Set("Content-Type", "application/json")
@@ -99,21 +109,21 @@ func Transit() http.HandlerFunc {
 			startTimeStr,
 		)
 
-	log.Printf("[API CALL] Transit: start=%s, goal=%s", startStation, endStation)
-	
-	// Rate limit external API call
-	middleware.SharedAPIRateLimiter.Wait()
-	
-	request, err := http.NewRequest("GET", url, nil)
+		log.Printf("[API CALL] Transit: start=%s, goal=%s", startStation, endStation)
+
+		// Rate limit external API call
+		middleware.SharedAPIRateLimiter.Wait()
+
+		request, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			http.Error(w, "Failed to create request", http.StatusInternalServerError)
 			return
 		}
 
-	request.Header.Add("X-RapidAPI-Key", key)
-	request.Header.Add("X-RapidAPI-Host", host)
+		request.Header.Add("X-RapidAPI-Key", key)
+		request.Header.Add("X-RapidAPI-Host", host)
 
-	response, err := middleware.SharedHTTPClient.Do(request)
+		response, err := middleware.SharedHTTPClient.Do(request)
 		if err != nil {
 			http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
 			return
@@ -139,29 +149,38 @@ func Transit() http.HandlerFunc {
 			return
 		}
 
-		// Translate values to romaji if lang=en
-		if lang == "en" {
+		switch translationMode {
+		case translationModeRomaji:
 			if err := utils.TranslateTypedTransitResponse(&responseData); err != nil {
 				log.Printf("Error translating values: %v", err)
 				http.Error(w, "Failed to translate values", http.StatusInternalServerError)
 				return
 			}
+		case translationModeOpenAI:
+			ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+			err := utils.TranslateTypedTransitResponseWithOpenAI(ctx, &responseData)
+			cancel()
+			if err != nil {
+				log.Printf("OpenAI translation error: %v", err)
+				http.Error(w, "Failed to translate values with OpenAI", http.StatusBadGateway)
+				return
+			}
 		}
 
-	translatedBody, err := json.Marshal(responseData)
-	if err != nil {
-		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
-		return
-	}
+		translatedBody, err := json.Marshal(responseData)
+		if err != nil {
+			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+			return
+		}
 
-	// Cache the response
-	responseCache.Set(cacheKey, translatedBody)
+		// Cache the response
+		responseCache.Set(cacheKey, translatedBody)
 
-	// println(string(translatedBody))
+		// println(string(translatedBody))
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Cache", "MISS")
-	_, err = w.Write(translatedBody)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "MISS")
+		_, err = w.Write(translatedBody)
 		if err != nil {
 			return
 		}

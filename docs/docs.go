@@ -52,6 +52,13 @@ const docTemplate = `{
                         "description": "Language for response (en for English/Romaji)",
                         "name": "lang",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": false,
+                        "description": "Use OpenAI translation when lang=en; requires X-Transit-App-Token",
+                        "name": "ai_translate",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -63,6 +70,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad request - missing or invalid parameters",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - missing or invalid app token for AI translation",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "502": {
+                        "description": "OpenAI upstream translation error",
                         "schema": {
                             "type": "string"
                         }
@@ -120,6 +139,13 @@ const docTemplate = `{
                         "description": "Language for response (en for English/Romaji)",
                         "name": "lang",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": false,
+                        "description": "Use OpenAI translation when lang=en; requires X-Transit-App-Token",
+                        "name": "ai_translate",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -131,6 +157,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad request - missing or invalid parameters",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - missing or invalid app token for AI translation",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "502": {
+                        "description": "OpenAI upstream translation error",
                         "schema": {
                             "type": "string"
                         }

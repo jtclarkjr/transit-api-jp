@@ -311,6 +311,11 @@ paths:
         in: query
         name: lang
         type: string
+      - description: Use OpenAI translation when lang=en; requires X-Transit-App-Token
+        example: false
+        in: query
+        name: ai_translate
+        type: boolean
       produces:
       - application/json
       responses:
@@ -320,6 +325,14 @@ paths:
             $ref: '#/definitions/model.FilteredAutocompleteResponse'
         "400":
           description: Bad request - missing or invalid parameters
+          schema:
+            type: string
+        "401":
+          description: Unauthorized - missing or invalid app token for AI translation
+          schema:
+            type: string
+        "502":
+          description: OpenAI upstream translation error
           schema:
             type: string
         "500":
@@ -359,6 +372,11 @@ paths:
         in: query
         name: lang
         type: string
+      - description: Use OpenAI translation when lang=en; requires X-Transit-App-Token
+        example: false
+        in: query
+        name: ai_translate
+        type: boolean
       produces:
       - application/json
       responses:
@@ -368,6 +386,14 @@ paths:
             $ref: '#/definitions/model.TransitResponse'
         "400":
           description: Bad request - missing or invalid parameters
+          schema:
+            type: string
+        "401":
+          description: Unauthorized - missing or invalid app token for AI translation
+          schema:
+            type: string
+        "502":
+          description: OpenAI upstream translation error
           schema:
             type: string
         "500":

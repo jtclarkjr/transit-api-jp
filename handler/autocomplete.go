@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,17 +14,19 @@ import (
 	"transit-api/cache"
 	"transit-api/model"
 	"transit-api/utils"
-	
+
 	"github.com/jtclarkjr/router-go/middleware"
 )
 
 // Autocomplete cache with 30 day TTL, max 5000 entries
-// Cache key format: "word|lang"
+// Cache key format: "word|lang:translation_mode"
 // Station names don't change, so long TTL is appropriate
 var autocompleteCache = cache.NewLRUCache(5000, 30*24*time.Hour)
 
 // Single flight to prevent duplicate in-flight requests
 var autocompleteSF = middleware.NewSingleFlight()
+
+var errOpenAITranslation = errors.New("openai translation failed")
 
 // Autocomplete handles autocomplete requests for station names
 // @Summary Get station name suggestions
@@ -32,19 +36,28 @@ var autocompleteSF = middleware.NewSingleFlight()
 // @Produce json
 // @Param word query string true "Search word for station names" example("東京")
 // @Param lang query string false "Language for response (en for English/Romaji)" example("en")
+// @Param ai_translate query bool false "Use OpenAI translation when lang=en; requires X-Transit-App-Token" example(false)
 // @Success 200 {object} model.FilteredAutocompleteResponse "Successful response with station suggestions"
 // @Failure 400 {string} string "Bad request - missing or invalid parameters"
+// @Failure 401 {string} string "Unauthorized - missing or invalid app token for AI translation"
+// @Failure 502 {string} string "OpenAI upstream translation error"
 // @Failure 500 {string} string "Internal server error"
 // @Router /autocomplete [get]
 func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	key := os.Getenv("RAPIDAPI_KEY")
 	host := os.Getenv("RAPIDAPI_TRANSPORT_HOST")
 	lang := r.URL.Query().Get("lang")
+	translationMode := parseTranslationMode(lang, r.URL.Query().Get("ai_translate"))
 
 	word := r.URL.Query().Get("word")
 
+	if requiresAppTokenForTranslation(translationMode) && !hasValidAppToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Check cache first
-	cacheKey := fmt.Sprintf("%s|%s", word, lang)
+	cacheKey := fmt.Sprintf("%s|%s", word, translationCacheVariant(lang, translationMode))
 	if cached, ok := autocompleteCache.Get(cacheKey); ok {
 		log.Printf("[CACHE HIT] Autocomplete: key=%s", cacheKey)
 		w.Header().Set("Content-Type", "application/json")
@@ -59,11 +72,15 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 	// Use single flight to prevent duplicate in-flight requests
 	log.Printf("[CACHE MISS] Autocomplete: key=%s, calling API...", cacheKey)
 	result, err := autocompleteSF.Do(cacheKey, func() ([]byte, error) {
-		return fetchAutocomplete(word, lang, key, host)
+		return fetchAutocomplete(r.Context(), word, translationMode, key, host)
 	})
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		status := http.StatusInternalServerError
+		if errors.Is(err, errOpenAITranslation) {
+			status = http.StatusBadGateway
+		}
+		http.Error(w, err.Error(), status)
 		return
 	}
 
@@ -78,18 +95,18 @@ func Autocomplete(w http.ResponseWriter, r *http.Request) {
 }
 
 // fetchAutocomplete performs the actual API call and processing
-func fetchAutocomplete(word, lang, key, host string) ([]byte, error) {
+func fetchAutocomplete(ctx context.Context, word string, translationMode translationMode, key, host string) ([]byte, error) {
 	url := fmt.Sprintf(
 		"https://%s/transport_node/autocomplete?word=%s&word_match=prefix",
 		host,
 		word,
 	)
 
-	log.Printf("[API CALL] Autocomplete: word=%s, lang=%s", word, lang)
-	
+	log.Printf("[API CALL] Autocomplete: word=%s, translation_mode=%s", word, translationMode)
+
 	// Rate limit external API call
 	middleware.SharedAPIRateLimiter.Wait()
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -118,42 +135,39 @@ func fetchAutocomplete(word, lang, key, host string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	// If the language is English, translate station names to Romaji
-	if lang == "en" {
-		var filteredItemsEn []model.FilteredStation
-		for _, item := range response.Items {
-			if len(item.Types) > 0 {
-				item.Type = item.Types[0]
-			}
-			if item.Type == "station" {
-				name := item.Ruby
-				romajiValue, err := utils.KanjiToRomaji(name)
-				if err != nil {
-					return nil, fmt.Errorf("failed to translate station name: %w", err)
-				}
-				filteredItemsEn = append(filteredItemsEn, model.FilteredStation{
-					ID:   item.ID,
-					Name: romajiValue,
-					Type: item.Type,
-				})
-			}
-		}
-		filteredResponse := model.FilteredAutocompleteResponse{Items: filteredItemsEn}
-		return json.Marshal(filteredResponse)
-	}
-
-	// Non-English: filter stations only
 	var filteredItems []model.FilteredStation
 	for _, item := range response.Items {
 		if len(item.Types) > 0 {
 			item.Type = item.Types[0]
 		}
 		if item.Type == "station" {
+			name := item.Name
+			if translationMode == translationModeRomaji {
+				var err error
+				name, err = utils.KanjiToRomaji(item.Ruby)
+				if err != nil {
+					return nil, fmt.Errorf("failed to translate station name: %w", err)
+				}
+			}
 			filteredItems = append(filteredItems, model.FilteredStation{
 				ID:   item.ID,
-				Name: item.Name,
+				Name: name,
 				Type: item.Type,
 			})
+		}
+	}
+
+	if translationMode == translationModeOpenAI {
+		refs := make([]*string, 0, len(filteredItems))
+		for i := range filteredItems {
+			refs = append(refs, &filteredItems[i].Name)
+		}
+
+		translationCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		err := utils.TranslateStringsWithOpenAI(translationCtx, refs...)
+		cancel()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", errOpenAITranslation, err)
 		}
 	}
 
